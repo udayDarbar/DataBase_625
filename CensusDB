@@ -1,0 +1,556 @@
+create DATABASE [CensusData2]
+go
+
+USE [CensusData2]
+GO
+
+/***** User-Level Security *****/
+/* Create roles */
+CREATE ROLE CensusData_Viewer;
+CREATE ROLE CensusData_Admin;
+GO
+
+/* Create sample users (adjust logins as needed) */
+CREATE USER demo FOR LOGIN ViewerUserLogin;
+CREATE USER uday FOR LOGIN AdminUserLogin;
+GO
+
+/* Add users to roles */
+EXEC sp_addrolemember 'CensusData_Viewer', 'demo';
+EXEC sp_addrolemember 'CensusData_Admin', 'uday';
+GO
+
+/* Grant SELECT on tables for viewers */
+GRANT SELECT ON Geoid_info TO CensusData_Viewer;
+GRANT SELECT ON Population_Demographics TO CensusData_Viewer;
+GRANT SELECT ON Socioeconomic_Factors TO CensusData_Viewer;
+GRANT SELECT ON Transportation_Mobility TO CensusData_Viewer;
+GRANT SELECT ON Housing_Data TO CensusData_Viewer;
+GO
+
+/* Grant full access on tables to admins */
+GRANT SELECT, INSERT, UPDATE, DELETE ON Geoid_info TO CensusData_Admin;
+GRANT SELECT, INSERT, UPDATE, DELETE ON Population_Demographics TO CensusData_Admin;
+GRANT SELECT, INSERT, UPDATE, DELETE ON Socioeconomic_Factors TO CensusData_Admin;
+GRANT SELECT, INSERT, UPDATE, DELETE ON Transportation_Mobility TO CensusData_Admin;
+GRANT SELECT, INSERT, UPDATE, DELETE ON Housing_Data TO CensusData_Admin;
+GO
+
+/* Grant EXECUTE on stored procedures to both roles */
+GRANT EXECUTE ON sp_IdentifyHighPovertyAreas TO CensusData_Viewer, CensusData_Admin;
+GRANT EXECUTE ON sp_IdentifyLowCoverageParishes TO CensusData_Viewer, CensusData_Admin;
+GRANT EXECUTE ON sp_AnalyzeStoreLocationPotential TO CensusData_Viewer, CensusData_Admin;
+GRANT EXECUTE ON sp_ExportCensusDataForHealthStudy TO CensusData_Viewer, CensusData_Admin;
+GRANT EXECUTE ON sp_GetYearlyPopulationTrends TO CensusData_Viewer, CensusData_Admin;
+GRANT EXECUTE ON sp_IdentifyTransportGaps TO CensusData_Viewer, CensusData_Admin;
+GRANT EXECUTE ON sp_AssessHousingAffordability TO CensusData_Viewer, CensusData_Admin;
+GRANT EXECUTE ON sp_IdentifyUnderinsuredPopulations TO CensusData_Viewer, CensusData_Admin;
+GO
+
+/***** Audit Tables *****/
+CREATE TABLE dbo.DataChangeLog(
+    LogID INT IDENTITY(1,1) PRIMARY KEY CLUSTERED,
+    UserName VARCHAR(128) NULL,
+    TableName VARCHAR(50) NULL,
+    ActionType VARCHAR(20) NULL,
+    PrimaryKeyValues NVARCHAR(MAX) NULL,
+    ColumnName VARCHAR(128) NULL,
+    OldValue NVARCHAR(MAX) NULL,
+    NewValue NVARCHAR(MAX) NULL,
+    ChangeDate DATETIME NOT NULL DEFAULT (GETDATE())
+) ON [PRIMARY] TEXTIMAGE_ON [PRIMARY];
+GO
+
+CREATE TABLE dbo.DeletedRecordsLog(
+    LogID INT IDENTITY(1,1) PRIMARY KEY CLUSTERED,
+    UserName VARCHAR(128) NULL,
+    TableName VARCHAR(50) NULL,
+    DeleteDate DATETIME NOT NULL DEFAULT (GETDATE()),
+    RecordDetails NVARCHAR(MAX) NULL
+) ON [PRIMARY] TEXTIMAGE_ON [PRIMARY];
+GO
+
+CREATE TABLE dbo.UserActivityLog(
+    LogID INT IDENTITY(1,1) PRIMARY KEY CLUSTERED,
+    UserName VARCHAR(128) NULL,
+    ActionType VARCHAR(20) NULL,
+    TableName VARCHAR(50) NULL,
+    ActionDate DATETIME NOT NULL DEFAULT (GETDATE()),
+    Details NVARCHAR(MAX) NULL
+) ON [PRIMARY] TEXTIMAGE_ON [PRIMARY];
+GO
+
+/***** Core Data Tables *****/
+CREATE TABLE dbo.Geoid_info(
+    Year INT NOT NULL,
+    StatFP VARCHAR(10) NOT NULL,
+    CountyFP VARCHAR(10) NOT NULL,
+    Tract VARCHAR(20) NOT NULL,
+    PRIMARY KEY CLUSTERED (Year, StatFP, CountyFP, Tract)
+) ON [PRIMARY];
+GO
+
+CREATE TABLE dbo.Housing_Data(
+    Year INT NOT NULL,
+    StatFP VARCHAR(10) NOT NULL,
+    CountyFP VARCHAR(10) NOT NULL,
+    Tract VARCHAR(20) NOT NULL,
+    VacantHousingUnits INT NULL,
+    OwnerOccupiedUnits INT NULL,
+    RenterOccupiedUnits INT NULL,
+    MedianHomeValue FLOAT NULL,
+    MedianGrossRent FLOAT NULL,
+    HouseholdSize FLOAT NULL,
+    PRIMARY KEY CLUSTERED (Year, StatFP, CountyFP, Tract)
+) ON [PRIMARY];
+GO
+
+CREATE TABLE dbo.Population_Demographics(
+    Year INT NOT NULL,
+    StatFP VARCHAR(10) NOT NULL,
+    CountyFP VARCHAR(10) NOT NULL,
+    Tract VARCHAR(20) NOT NULL,
+    MedianAge FLOAT NULL,
+    White INT NULL,
+    BlackorAfricanAmerican INT NULL,
+    HispanicorLatino INT NULL,
+    Asian INT NULL,
+    AmericanIndian INT NULL,
+    NativeHawaiian INT NULL,
+    TotalMalePopulation INT NULL,
+    TotalFemalePopulation INT NULL,
+    WithDisability INT NULL,
+    WithHealthInsurance INT NULL,
+    PRIMARY KEY CLUSTERED (Year, StatFP, CountyFP, Tract)
+) ON [PRIMARY];
+GO
+
+CREATE TABLE dbo.Socioeconomic_Factors(
+    Year INT NOT NULL,
+    StatFP VARCHAR(10) NOT NULL,
+    CountyFP VARCHAR(10) NOT NULL,
+    Tract VARCHAR(20) NOT NULL,
+    MedianHouseholdIncome FLOAT NULL,
+    PerCapitaIncome FLOAT NULL,
+    PeopleBelowPovertyLine INT NULL,
+    ChildPovertyRate FLOAT NULL,
+    HighSchoolGraduate INT NULL,
+    SomeCollege INT NULL,
+    BachelorsDegreeorHigher INT NULL,
+    InLaborForce INT NULL,
+    CivilianLaborForce INT NULL,
+    Employed INT NULL,
+    Unemployed INT NULL,
+    NotinLaborForce INT NULL,
+    PRIMARY KEY CLUSTERED (Year, StatFP, CountyFP, Tract)
+) ON [PRIMARY];
+GO
+
+CREATE TABLE dbo.Transportation_Mobility(
+    Year INT NOT NULL,
+    StatFP VARCHAR(10) NOT NULL,
+    CountyFP VARCHAR(10) NOT NULL,
+    Tract VARCHAR(20) NOT NULL,
+    WorkedatHome INT NULL,
+    PublicTransportation INT NULL,
+    AverageTravelTimetoWork FLOAT NULL,
+    NoVehicleAvailable INT NULL,
+    OneVehicleAvailable INT NULL,
+    TwoVehiclesAvailable INT NULL,
+    ThreeorMoreVehiclesAvailable INT NULL,
+    CarOwnershipperHousehold FLOAT NULL,
+    PRIMARY KEY CLUSTERED (Year, StatFP, CountyFP, Tract)
+) ON [PRIMARY];
+GO
+
+/***** Foreign Key Constraints *****/
+ALTER TABLE dbo.Housing_Data WITH CHECK
+    ADD FOREIGN KEY(Year, StatFP, CountyFP, Tract)
+    REFERENCES dbo.Geoid_info(Year, StatFP, CountyFP, Tract);
+GO
+
+ALTER TABLE dbo.Population_Demographics WITH CHECK
+    ADD FOREIGN KEY(Year, StatFP, CountyFP, Tract)
+    REFERENCES dbo.Geoid_info(Year, StatFP, CountyFP, Tract);
+GO
+
+ALTER TABLE dbo.Socioeconomic_Factors WITH CHECK
+    ADD FOREIGN KEY(Year, StatFP, CountyFP, Tract)
+    REFERENCES dbo.Geoid_info(Year, StatFP, CountyFP, Tract);
+GO
+
+ALTER TABLE dbo.Transportation_Mobility WITH CHECK
+    ADD FOREIGN KEY(Year, StatFP, CountyFP, Tract)
+    REFERENCES dbo.Geoid_info(Year, StatFP, CountyFP, Tract);
+GO
+
+/***** Stored Procedures *****/
+CREATE PROCEDURE dbo.sp_AnalyzeStoreLocationPotential
+    @Year INT,
+    @MinPopulation INT,
+    @MinMedianIncome FLOAT
+AS
+BEGIN
+    SELECT 
+        gi.Year,
+        gi.StatFP AS StateFP,
+        gi.CountyFP,
+        gi.Tract,
+        pd.White + pd.BlackorAfricanAmerican + pd.HispanicorLatino + pd.Asian +
+            pd.AmericanIndian + pd.NativeHawaiian AS TotalPop,
+        sf.MedianHouseholdIncome,
+        tm.CarOwnershipperHousehold
+    FROM dbo.Geoid_info gi
+    JOIN dbo.Population_Demographics pd 
+      ON gi.Year = pd.Year AND gi.StatFP = pd.StatFP AND gi.CountyFP = pd.CountyFP AND gi.Tract = pd.Tract
+    JOIN dbo.Socioeconomic_Factors sf
+      ON gi.Year = sf.Year AND gi.StatFP = sf.StatFP AND gi.CountyFP = sf.CountyFP AND gi.Tract = sf.Tract
+    JOIN dbo.Transportation_Mobility tm
+      ON gi.Year = tm.Year AND gi.StatFP = tm.StatFP AND gi.CountyFP = tm.CountyFP AND gi.Tract = tm.Tract
+    WHERE gi.Year = @Year
+      AND (pd.White + pd.BlackorAfricanAmerican + pd.HispanicorLatino + pd.Asian +
+           pd.AmericanIndian + pd.NativeHawaiian) >= @MinPopulation
+      AND sf.MedianHouseholdIncome >= @MinMedianIncome
+    ORDER BY sf.MedianHouseholdIncome DESC;
+END;
+GO
+
+CREATE PROCEDURE dbo.sp_AssessHousingAffordability
+    @Year INT,
+    @RentToIncomeRatioThreshold FLOAT
+AS
+BEGIN
+    SELECT
+        gi.Year,
+        gi.StatFP AS StateFP,
+        gi.CountyFP,
+        gi.Tract,
+        hd.MedianGrossRent,
+        sf.MedianHouseholdIncome,
+        (hd.MedianGrossRent * 12.0) / NULLIF(sf.MedianHouseholdIncome, 0) AS RentToIncomeRatio
+    FROM dbo.Housing_Data hd
+    JOIN dbo.Socioeconomic_Factors sf
+      ON hd.Year = sf.Year AND hd.StatFP = sf.StatFP AND hd.CountyFP = sf.CountyFP AND hd.Tract = sf.Tract
+    JOIN dbo.Geoid_info gi
+      ON hd.Year = gi.Year AND hd.StatFP = gi.StatFP AND hd.CountyFP = gi.CountyFP AND hd.Tract = gi.Tract
+    WHERE gi.Year = @Year
+      AND ((hd.MedianGrossRent * 12.0) / NULLIF(sf.MedianHouseholdIncome, 0)) >= @RentToIncomeRatioThreshold
+    ORDER BY (hd.MedianGrossRent * 12.0) / NULLIF(sf.MedianHouseholdIncome, 0) DESC;
+END;
+GO
+
+CREATE PROCEDURE dbo.sp_ExportCensusDataForHealthStudy
+    @StartYear INT,
+    @EndYear   INT
+AS
+BEGIN
+    SELECT 
+        gi.Year,
+        gi.StatFP AS StateFP,
+        gi.CountyFP,
+        gi.Tract,
+        pd.MedianAge,
+        pd.TotalMalePopulation,
+        pd.TotalFemalePopulation,
+        pd.WithHealthInsurance,
+        sf.MedianHouseholdIncome,
+        sf.PeopleBelowPovertyLine,
+        tm.PublicTransportation,
+        tm.AverageTravelTimetoWork,
+        hd.MedianHomeValue,
+        hd.MedianGrossRent
+    FROM dbo.Geoid_info gi
+    JOIN dbo.Population_Demographics pd 
+      ON gi.Year = pd.Year AND gi.StatFP = pd.StatFP AND gi.CountyFP = pd.CountyFP AND gi.Tract = pd.Tract
+    JOIN dbo.Socioeconomic_Factors sf
+      ON gi.Year = sf.Year AND gi.StatFP = sf.StatFP AND gi.CountyFP = sf.CountyFP AND gi.Tract = sf.Tract
+    JOIN dbo.Transportation_Mobility tm
+      ON gi.Year = tm.Year AND gi.StatFP = tm.StatFP AND gi.CountyFP = tm.CountyFP AND gi.Tract = tm.Tract
+    JOIN dbo.Housing_Data hd
+      ON gi.Year = hd.Year AND gi.StatFP = hd.StatFP AND gi.CountyFP = hd.CountyFP AND gi.Tract = hd.Tract
+    WHERE gi.Year BETWEEN @StartYear AND @EndYear
+    ORDER BY gi.Year, gi.StatFP, gi.CountyFP, gi.Tract;
+END;
+GO
+
+CREATE PROCEDURE dbo.sp_GetYearlyPopulationTrends
+    @StartYear INT,
+    @EndYear   INT
+AS
+BEGIN
+    WITH PopTotals AS (
+        SELECT 
+            Year,
+            StatFP,
+            CountyFP,
+            Tract,
+            (White + BlackorAfricanAmerican + HispanicorLatino + Asian + AmericanIndian + NativeHawaiian) AS TotalPop
+        FROM dbo.Population_Demographics
+    )
+    SELECT 
+        p1.Year AS CurrentYear,
+        p1.StatFP AS StateFP,
+        p1.CountyFP,
+        p1.Tract,
+        p1.TotalPop AS PopulationThisYear,
+        p2.TotalPop AS PopulationLastYear,
+        (p1.TotalPop - p2.TotalPop) AS YearlyChange
+    FROM PopTotals p1
+    LEFT JOIN PopTotals p2
+      ON p1.StatFP = p2.StatFP AND p1.CountyFP = p2.CountyFP AND p1.Tract = p2.Tract AND p1.Year = p2.Year + 1
+    WHERE p1.Year BETWEEN @StartYear AND @EndYear
+    ORDER BY p1.Year, p1.StatFP, p1.CountyFP, p1.Tract;
+END;
+GO
+
+CREATE PROCEDURE dbo.sp_IdentifyHighPovertyAreas
+    @StartYear INT,
+    @EndYear   INT,
+    @PovertyThreshold INT
+AS
+BEGIN
+    SELECT 
+        gi.Year,
+        gi.StatFP AS StateFP,
+        gi.CountyFP,
+        gi.Tract,
+        sf.PeopleBelowPovertyLine,
+        sf.ChildPovertyRate
+    FROM dbo.Socioeconomic_Factors sf
+    JOIN dbo.Geoid_info gi 
+      ON sf.Year = gi.Year AND sf.StatFP = gi.StatFP AND sf.CountyFP = gi.CountyFP AND sf.Tract = gi.Tract
+    WHERE gi.Year BETWEEN @StartYear AND @EndYear
+      AND sf.PeopleBelowPovertyLine >= @PovertyThreshold
+    ORDER BY gi.Year, sf.PeopleBelowPovertyLine DESC;
+END;
+GO
+
+CREATE PROCEDURE dbo.sp_IdentifyLowCoverageParishes
+    @Year INT,
+    @CoverageThreshold INT
+AS
+BEGIN
+    SELECT 
+        gi.Year,
+        gi.StatFP AS StateFP,
+        gi.CountyFP,
+        gi.Tract,
+        pd.WithHealthInsurance,
+        (pd.TotalMalePopulation + pd.TotalFemalePopulation) AS TotalPop
+    FROM dbo.Population_Demographics pd
+    JOIN dbo.Geoid_info gi 
+      ON pd.Year = gi.Year AND pd.StatFP = gi.StatFP AND pd.CountyFP = gi.CountyFP AND pd.Tract = gi.Tract
+    WHERE gi.Year = @Year
+      AND pd.WithHealthInsurance < @CoverageThreshold
+    ORDER BY pd.WithHealthInsurance ASC;
+END;
+GO
+
+CREATE PROCEDURE dbo.sp_IdentifyTransportGaps
+    @Year INT,
+    @MaxTravelTime FLOAT,
+    @MinPublicTransportUsage INT
+AS
+BEGIN
+    SELECT 
+        gi.Year,
+        gi.StatFP AS StateFP,
+        gi.CountyFP,
+        gi.Tract,
+        tm.WorkedatHome,
+        tm.PublicTransportation,
+        tm.AverageTravelTimetoWork,
+        tm.NoVehicleAvailable
+    FROM dbo.Transportation_Mobility tm
+    JOIN dbo.Geoid_info gi
+      ON tm.Year = gi.Year AND tm.StatFP = gi.StatFP AND tm.CountyFP = gi.CountyFP AND tm.Tract = gi.Tract
+    WHERE gi.Year = @Year
+      AND tm.AverageTravelTimetoWork > @MaxTravelTime
+      AND tm.PublicTransportation < @MinPublicTransportUsage
+    ORDER BY tm.NoVehicleAvailable DESC;
+END;
+GO
+
+CREATE PROCEDURE dbo.sp_IdentifyUnderinsuredPopulations
+    @Year INT
+AS
+BEGIN
+    SELECT 
+        gi.Year,
+        gi.StatFP AS StateFP,
+        gi.CountyFP,
+        gi.Tract,
+        pd.WithDisability,
+        pd.WithHealthInsurance,
+        (pd.WithDisability - (pd.WithDisability * (pd.WithHealthInsurance * 1.0 / (pd.TotalMalePopulation + pd.TotalFemalePopulation)))) 
+            AS EstimatedUninsuredWithDisability
+    FROM dbo.Population_Demographics pd
+    JOIN dbo.Geoid_info gi
+      ON pd.Year = gi.Year AND pd.StatFP = gi.StatFP AND pd.CountyFP = gi.CountyFP AND pd.Tract = gi.Tract
+    WHERE gi.Year = @Year
+    ORDER BY EstimatedUninsuredWithDisability DESC;
+END;
+GO
+
+/***** Triggers for INSERT and DELETE Events *****/
+/* Geoid_info */
+CREATE TRIGGER trg_Geoid_info_Insert
+ON dbo.Geoid_info
+AFTER INSERT
+AS
+BEGIN
+    INSERT INTO dbo.DataChangeLog (UserName, TableName, ActionType, PrimaryKeyValues, NewValue)
+    SELECT SYSTEM_USER, 'Geoid_info', 'INSERT',
+           CONCAT('Year=', i.Year, ', StatFP=', i.StatFP, ', CountyFP=', i.CountyFP, ', Tract=', i.Tract),
+           ''
+    FROM inserted i;
+END;
+GO
+
+CREATE TRIGGER trg_Geoid_info_Delete
+ON dbo.Geoid_info
+AFTER DELETE
+AS
+BEGIN
+    INSERT INTO dbo.DeletedRecordsLog (UserName, TableName, RecordDetails)
+    SELECT SYSTEM_USER, 'Geoid_info',
+           CONCAT('Year=', d.Year, ', StatFP=', d.StatFP, ', CountyFP=', d.CountyFP, ', Tract=', d.Tract)
+    FROM deleted d;
+END;
+GO
+
+/* Housing_Data */
+CREATE TRIGGER trg_Housing_Data_Insert
+ON dbo.Housing_Data
+AFTER INSERT
+AS
+BEGIN
+    INSERT INTO dbo.DataChangeLog (UserName, TableName, ActionType, PrimaryKeyValues, NewValue)
+    SELECT SYSTEM_USER, 'Housing_Data', 'INSERT',
+           CONCAT('Year=', i.Year, ', StatFP=', i.StatFP, ', CountyFP=', i.CountyFP, ', Tract=', i.Tract),
+           CONCAT('VacantHousingUnits=', i.VacantHousingUnits, '; OwnerOccupiedUnits=', i.OwnerOccupiedUnits, 
+                  '; RenterOccupiedUnits=', i.RenterOccupiedUnits, '; MedianHomeValue=', i.MedianHomeValue, 
+                  '; MedianGrossRent=', i.MedianGrossRent, '; HouseholdSize=', i.HouseholdSize)
+    FROM inserted i;
+END;
+GO
+
+CREATE TRIGGER trg_Housing_Data_Delete
+ON dbo.Housing_Data
+AFTER DELETE
+AS
+BEGIN
+    INSERT INTO dbo.DeletedRecordsLog (UserName, TableName, RecordDetails)
+    SELECT SYSTEM_USER, 'Housing_Data',
+           CONCAT('Year=', d.Year, ', StatFP=', d.StatFP, ', CountyFP=', d.CountyFP, ', Tract=', d.Tract, '; ',
+                  'VacantHousingUnits=', d.VacantHousingUnits, '; OwnerOccupiedUnits=', d.OwnerOccupiedUnits, 
+                  '; RenterOccupiedUnits=', d.RenterOccupiedUnits, '; MedianHomeValue=', d.MedianHomeValue, 
+                  '; MedianGrossRent=', d.MedianGrossRent, '; HouseholdSize=', d.HouseholdSize)
+    FROM deleted d;
+END;
+GO
+
+/* Population_Demographics */
+CREATE TRIGGER trg_Population_Demographics_Insert
+ON dbo.Population_Demographics
+AFTER INSERT
+AS
+BEGIN
+    INSERT INTO dbo.DataChangeLog (UserName, TableName, ActionType, PrimaryKeyValues, NewValue)
+    SELECT SYSTEM_USER, 'Population_Demographics', 'INSERT',
+           CONCAT('Year=', i.Year, ', StatFP=', i.StatFP, ', CountyFP=', i.CountyFP, ', Tract=', i.Tract),
+           CONCAT('MedianAge=', i.MedianAge, '; White=', i.White, '; BlackorAfricanAmerican=', i.BlackorAfricanAmerican, 
+                  '; HispanicorLatino=', i.HispanicorLatino, '; Asian=', i.Asian, '; AmericanIndian=', i.AmericanIndian, 
+                  '; NativeHawaiian=', i.NativeHawaiian, '; TotalMalePopulation=', i.TotalMalePopulation, 
+                  '; TotalFemalePopulation=', i.TotalFemalePopulation, '; WithDisability=', i.WithDisability, 
+                  '; WithHealthInsurance=', i.WithHealthInsurance)
+    FROM inserted i;
+END;
+GO
+
+CREATE TRIGGER trg_Population_Demographics_Delete
+ON dbo.Population_Demographics
+AFTER DELETE
+AS
+BEGIN
+    INSERT INTO dbo.DeletedRecordsLog (UserName, TableName, RecordDetails)
+    SELECT SYSTEM_USER, 'Population_Demographics',
+           CONCAT('Year=', d.Year, ', StatFP=', d.StatFP, ', CountyFP=', d.CountyFP, ', Tract=', d.Tract, '; ',
+                  'MedianAge=', d.MedianAge, '; White=', d.White, '; BlackorAfricanAmerican=', d.BlackorAfricanAmerican, 
+                  '; HispanicorLatino=', d.HispanicorLatino, '; Asian=', d.Asian, '; AmericanIndian=', d.AmericanIndian, 
+                  '; NativeHawaiian=', d.NativeHawaiian, '; TotalMalePopulation=', d.TotalMalePopulation, 
+                  '; TotalFemalePopulation=', d.TotalFemalePopulation, '; WithDisability=', d.WithDisability, 
+                  '; WithHealthInsurance=', d.WithHealthInsurance)
+    FROM deleted d;
+END;
+GO
+
+/* Socioeconomic_Factors */
+CREATE TRIGGER trg_Socioeconomic_Factors_Insert
+ON dbo.Socioeconomic_Factors
+AFTER INSERT
+AS
+BEGIN
+    INSERT INTO dbo.DataChangeLog (UserName, TableName, ActionType, PrimaryKeyValues, NewValue)
+    SELECT SYSTEM_USER, 'Socioeconomic_Factors', 'INSERT',
+           CONCAT('Year=', i.Year, ', StatFP=', i.StatFP, ', CountyFP=', i.CountyFP, ', Tract=', i.Tract),
+           CONCAT('MedianHouseholdIncome=', i.MedianHouseholdIncome, '; PerCapitaIncome=', i.PerCapitaIncome, 
+                  '; PeopleBelowPovertyLine=', i.PeopleBelowPovertyLine, '; ChildPovertyRate=', i.ChildPovertyRate, 
+                  '; HighSchoolGraduate=', i.HighSchoolGraduate, '; SomeCollege=', i.SomeCollege, 
+                  '; BachelorsDegreeorHigher=', i.BachelorsDegreeorHigher, '; InLaborForce=', i.InLaborForce, 
+                  '; CivilianLaborForce=', i.CivilianLaborForce, '; Employed=', i.Employed, '; Unemployed=', i.Unemployed, 
+                  '; NotinLaborForce=', i.NotinLaborForce)
+    FROM inserted i;
+END;
+GO
+
+CREATE TRIGGER trg_Socioeconomic_Factors_Delete
+ON dbo.Socioeconomic_Factors
+AFTER DELETE
+AS
+BEGIN
+    INSERT INTO dbo.DeletedRecordsLog (UserName, TableName, RecordDetails)
+    SELECT SYSTEM_USER, 'Socioeconomic_Factors',
+           CONCAT('Year=', d.Year, ', StatFP=', d.StatFP, ', CountyFP=', d.CountyFP, ', Tract=', d.Tract, '; ',
+                  'MedianHouseholdIncome=', d.MedianHouseholdIncome, '; PerCapitaIncome=', d.PerCapitaIncome, 
+                  '; PeopleBelowPovertyLine=', d.PeopleBelowPovertyLine, '; ChildPovertyRate=', d.ChildPovertyRate, 
+                  '; HighSchoolGraduate=', d.HighSchoolGraduate, '; SomeCollege=', d.SomeCollege, 
+                  '; BachelorsDegreeorHigher=', d.BachelorsDegreeorHigher, '; InLaborForce=', d.InLaborForce, 
+                  '; CivilianLaborForce=', d.CivilianLaborForce, '; Employed=', d.Employed, '; Unemployed=', d.Unemployed, 
+                  '; NotinLaborForce=', d.NotinLaborForce)
+    FROM deleted d;
+END;
+GO
+
+/* Transportation_Mobility */
+CREATE TRIGGER trg_Transportation_Mobility_Insert
+ON dbo.Transportation_Mobility
+AFTER INSERT
+AS
+BEGIN
+    INSERT INTO dbo.DataChangeLog (UserName, TableName, ActionType, PrimaryKeyValues, NewValue)
+    SELECT SYSTEM_USER, 'Transportation_Mobility', 'INSERT',
+           CONCAT('Year=', i.Year, ', StatFP=', i.StatFP, ', CountyFP=', i.CountyFP, ', Tract=', i.Tract),
+           CONCAT('WorkedatHome=', i.WorkedatHome, '; PublicTransportation=', i.PublicTransportation, 
+                  '; AverageTravelTimetoWork=', i.AverageTravelTimetoWork, '; NoVehicleAvailable=', i.NoVehicleAvailable, 
+                  '; OneVehicleAvailable=', i.OneVehicleAvailable, '; TwoVehiclesAvailable=', i.TwoVehiclesAvailable, 
+                  '; ThreeorMoreVehiclesAvailable=', i.ThreeorMoreVehiclesAvailable, '; CarOwnershipperHousehold=', i.CarOwnershipperHousehold)
+    FROM inserted i;
+END;
+GO
+
+CREATE TRIGGER trg_Transportation_Mobility_Delete
+ON dbo.Transportation_Mobility
+AFTER DELETE
+AS
+BEGIN
+    INSERT INTO dbo.DeletedRecordsLog (UserName, TableName, RecordDetails)
+    SELECT SYSTEM_USER, 'Transportation_Mobility',
+           CONCAT('Year=', d.Year, ', StatFP=', d.StatFP, ', CountyFP=', d.CountyFP, ', Tract=', d.Tract, '; ',
+                  'WorkedatHome=', d.WorkedatHome, '; PublicTransportation=', d.PublicTransportation, 
+                  '; AverageTravelTimetoWork=', d.AverageTravelTimetoWork, '; NoVehicleAvailable=', d.NoVehicleAvailable, 
+                  '; OneVehicleAvailable=', d.OneVehicleAvailable, '; TwoVehiclesAvailable=', d.TwoVehiclesAvailable, 
+                  '; ThreeorMoreVehiclesAvailable=', d.ThreeorMoreVehiclesAvailable, '; CarOwnershipperHousehold=', d.CarOwnershipperHousehold)
+    FROM deleted d;
+END;
+GO
