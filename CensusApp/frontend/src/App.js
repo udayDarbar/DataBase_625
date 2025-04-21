@@ -22,20 +22,17 @@ function App() {
     <UserProvider>
       <Router>
         <Routes>
-          {/* Publicly declared login/sign-up routes that are only available to users
-              that have not been authenticated by Clerk yet. */}
+          {/* Publicly declared login/sign-up routes */}
           <Route path="/login" element={<Login />} />
           <Route path="/sign-up" element={<Signup />} />
 
-          {/* These are our public "fallback routes." If the user tries to 
-              type in anything after our site, this 
-              reroutes the user to the /login page. */}
+          {/* Default route */}
           <Route
             path="/"
             element={
               <>
                 <SignedIn>
-                  <Navigate to={ROUTES.dashboard.path} replace />
+                  <Navigate to="/dashboard" replace />
                 </SignedIn>
                 <SignedOut>
                   <Navigate to="/login" replace />
@@ -44,20 +41,20 @@ function App() {
             }
           />
 
-          {/* Protected application routes! 
-            These are only accessible when Clerk login has been authenticated and the user is signed in. 
-            Our entire application is wrapped in the <Layout> Component. */}
+          {/* Protected application routes */}
           <Route
+            path="/*"
             element={
               <>
                 <SignedIn>
                   <Layout>
                     <Routes>
-                      {/* Dynamically generates all protected application routes from 
-                          the ROUTES array in Routes.js */}
+                      {/* Dynamic routes from ROUTES object */}
                       {Object.values(ROUTES).map(({ path, element: Element }) => (
                         <Route key={path} path={path} element={<Element />} />
                       ))}
+                      
+                      {/* No "not found" route for now */}
                     </Routes>
                   </Layout>
                 </SignedIn>
@@ -66,12 +63,7 @@ function App() {
                 </SignedOut>
               </>
             }
-          >
-            <Route
-              path="*"
-              element={<Navigate to={ROUTES.notfound.path} replace />}
-            />
-          </Route>
+          />
         </Routes>
       </Router>
     </UserProvider>
