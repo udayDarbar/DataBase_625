@@ -13,11 +13,11 @@ RUN pip install --no-cache-dir -r requirements.txt
 # Install watchdog to improve reloading in Docker
 RUN pip install watchdog
 
-# Copies the rest of the application code to the container
+# Copy files
 COPY . .
 
 # Exposes port 5000 for Flask
 EXPOSE 5000
 
-# Run the flask application
-CMD ["flask", "--app", "src/app.py", "run", "--host=0.0.0.0", "--debug"]
+# Use shell form to directly invoke the script
+CMD ["/bin/sh", "-c", "python wait_for_mysql.py && flask --app src/app.py run --host=0.0.0.0 --debug"]
