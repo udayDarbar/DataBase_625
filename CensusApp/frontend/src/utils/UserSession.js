@@ -2,6 +2,9 @@ import { useUser } from '@clerk/clerk-react';
 import { useEffect, useState } from 'react';
 import axios from 'axios';
 
+// Set a default API URL if the environment variable is not set
+const DEFAULT_API_URL = 'http://localhost:5001';
+
 /**
  * Custom hook for syncing the current user's session data to the backend.
  *
@@ -13,14 +16,14 @@ import axios from 'axios';
 export function UserSession() {
   const { isLoaded, user } = useUser();
   const [isSynced, setIsSynced] = useState(false);
-  const REACT_APP_API_URL = process.env.REACT_APP_API_URL;
+  const API_BASE = process.env.REACT_APP_API_URL || DEFAULT_API_URL;
 
   useEffect(() => {
     // Only attempt syncing if user data is loaded and available,
     // and we haven't synced already.
     if (isLoaded && user && !isSynced) {
       // First, fetch the existing user profile to get the role
-      axios.get(`${REACT_APP_API_URL}/api/user-profile`, {
+      axios.get(`${API_BASE}/api/user-profile`, {
         params: { userId: user.id }
       })
       .then(roleResponse => {
@@ -40,7 +43,7 @@ export function UserSession() {
         };
 
         // Sync user data to your backend
-        return axios.post(`${REACT_APP_API_URL}/api/save-user`, userData);
+        return axios.post(`${API_BASE}/api/save-user`, userData);
       })
       .then((response) => {
         console.log('User session synced successfully');
@@ -53,7 +56,7 @@ export function UserSession() {
         );
       });
     }
-  }, [isLoaded, user, isSynced, REACT_APP_API_URL]);
+  }, [isLoaded, user, isSynced, API_BASE]);
 
   return { isLoaded, user, isSynced };
 }

@@ -10,7 +10,7 @@ import Login from './pages/Login/Login';
 import Signup from './pages/Signup/Signup';
 import './App.css';
 import { ROUTES } from './config/Routes';
-import Layout from './components/common/layout/Layout';
+import Layout from './components/common/Layout/Layout';
 import { UserProvider } from './contexts/UserContext';
 import { cleanClerkUrlParams } from './utils/clerkUtils';
 

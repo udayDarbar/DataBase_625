@@ -5,6 +5,9 @@ import axios from 'axios';
 // Create context
 const UserContext = createContext();
 
+// Set a default API URL if the environment variable is not set
+const DEFAULT_API_URL = 'http://localhost:5001';
+
 /**
  * UserProvider component that centralizes user data management
  * Fetches user profile data once and provides it to all components
@@ -15,7 +18,14 @@ export function UserProvider({ children }) {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
   const [initialized, setInitialized] = useState(false);
-  const REACT_APP_API_URL = process.env.REACT_APP_API_URL;
+  
+  // Get API URL from environment variables or use default
+  const API_BASE = process.env.REACT_APP_API_URL || DEFAULT_API_URL;
+  
+  // Log which API URL is being used (for debugging)
+  useEffect(() => {
+    console.log(`Using API URL: ${API_BASE}`);
+  }, [API_BASE]);
 
   // Fetch and sync user data once when the app loads
   useEffect(() => {
@@ -28,7 +38,7 @@ export function UserProvider({ children }) {
         // First fetch the existing profile including role
         let currentRole = 'User'; // Default role
         try {
-          const profileResponse = await axios.get(`${REACT_APP_API_URL}/api/user-profile`, {
+          const profileResponse = await axios.get(`${API_BASE}/api/user-profile`, {
             params: { userId: user.id }
           });
           
@@ -56,7 +66,7 @@ export function UserProvider({ children }) {
         };
 
         // Save user data to backend
-        await axios.post(`${REACT_APP_API_URL}/api/save-user`, userData);
+        await axios.post(`${API_BASE}/api/save-user`, userData);
 
         // Set complete user profile in context state
         setUserProfile({
@@ -78,7 +88,7 @@ export function UserProvider({ children }) {
     };
 
     initializeUserData();
-  }, [clerkLoaded, user, initialized, REACT_APP_API_URL]);
+  }, [clerkLoaded, user, initialized, API_BASE]);
 
   /**
    * Update user profile data
@@ -97,7 +107,7 @@ export function UserProvider({ children }) {
       };
       
       // Save to backend
-      await axios.post(`${REACT_APP_API_URL}/api/save-user`, dataToSave);
+      await axios.post(`${API_BASE}/api/save-user`, dataToSave);
       
       // Update local state
       setUserProfile(dataToSave);
