@@ -182,15 +182,6 @@ const Sidebar = ({ isOpen, onClose }) => {
       <div className="mt-auto border-t border-gray-200 py-4 px-4">
         <div className="space-y-2">
           <NavItem
-            icon={<Info className="w-4 h-4" />}
-            label="About"
-            isActive={location.pathname === '/about'}
-            onClick={() => {
-              navigate('/about');
-              if (isOpen) onClose();
-            }}
-          />
-          <NavItem
             icon={<LogOut className="w-4 h-4" />}
             label="Logout"
             isActive={false}

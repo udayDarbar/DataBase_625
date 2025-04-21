@@ -6,10 +6,16 @@ import Loader from '../../components/common/loader/Loader';
 import PopulationGrowthChart from '../../components/specific/PopulationChart/PopulationGrowthChart';
 import DemographicsCard from '../../components/specific/DemographicsCard/DemographicsCard';
 import CountryTable from '../../components/specific/CountryTable/CountryTable';
+import { Calendar } from 'lucide-react';
 
 // API URL from environment variables
 const REACT_APP_API_URL = process.env.REACT_APP_API_URL;
 
+/**
+ * Dashboard component - Main dashboard view of the application
+ * Displays population statistics, demographics, growth data, and country rankings
+ * @returns {JSX.Element} Dashboard component
+ */
 const Dashboard = () => {
   const { user } = UserSession(); // User session
   const [loading, setLoading] = useState(true);
@@ -25,6 +31,72 @@ const Dashboard = () => {
   });
   const [topCountries, setTopCountries] = useState([]);
   const [selectedYear, setSelectedYear] = useState(2023);
+  const [topCountriesByLandArea, setTopCountriesByLandArea] = useState([
+    { country: 'Russia', area: 16376870 },
+    { country: 'China', area: 9388211 },
+    { country: 'U.S', area: 9147420 },
+    { country: 'Canada', area: 9093510 },
+    { country: 'Brazil', area: 8358140 },
+    { country: 'Australia', area: 7682300 },
+    { country: 'India', area: 2973190 },
+    { country: 'Argentina', area: 2736690 },
+    { country: 'Kazakhstan', area: 2699700 },
+    { country: 'Algeria', area: 2381740 }
+  ]);
+  
+  // Current date for calendar
+  const [currentDate, setCurrentDate] = useState(new Date());
+  const [currentMonth, setCurrentMonth] = useState('November 2022');
+  
+  // Calendar days grid - sample for November 2022
+  const calendarDays = [
+    { day: 28, month: 'Oct' },
+    { day: 29, month: 'Oct' },
+    { day: 30, month: 'Oct' },
+    { day: 31, month: 'Oct' },
+    { day: 1, month: 'Nov', isCurrentMonth: true },
+    { day: 2, month: 'Nov', isCurrentMonth: true },
+    { day: 3, month: 'Nov', isCurrentMonth: true },
+    { day: 4, month: 'Nov', isCurrentMonth: true },
+    { day: 5, month: 'Nov', isCurrentMonth: true },
+    { day: 6, month: 'Nov', isCurrentMonth: true },
+    { day: 7, month: 'Nov', isCurrentMonth: true },
+    { day: 8, month: 'Nov', isCurrentMonth: true },
+    { day: 9, month: 'Nov', isCurrentMonth: true },
+    { day: 10, month: 'Nov', isCurrentMonth: true },
+    { day: 11, month: 'Nov', isCurrentMonth: true },
+    { day: 12, month: 'Nov', isCurrentMonth: true },
+    { day: 13, month: 'Nov', isCurrentMonth: true },
+    { day: 14, month: 'Nov', isCurrentMonth: true },
+    { day: 15, month: 'Nov', isCurrentMonth: true },
+    { day: 16, month: 'Nov', isCurrentMonth: true },
+    { day: 17, month: 'Nov', isCurrentMonth: true },
+    { day: 18, month: 'Nov', isCurrentMonth: true },
+    { day: 19, month: 'Nov', isCurrentMonth: true },
+    { day: 20, month: 'Nov', isCurrentMonth: true },
+    { day: 21, month: 'Nov', isCurrentMonth: true },
+    { day: 22, month: 'Nov', isCurrentMonth: true },
+    { day: 23, month: 'Nov', isCurrentMonth: true },
+    { day: 24, month: 'Nov', isCurrentMonth: true },
+    { day: 25, month: 'Nov', isCurrentMonth: true },
+    { day: 26, month: 'Nov', isCurrentMonth: true },
+    { day: 27, month: 'Nov', isCurrentMonth: true },
+    { day: 28, month: 'Nov', isCurrentMonth: true },
+    { day: 29, month: 'Nov', isCurrentMonth: true },
+    { day: 30, month: 'Nov', isCurrentMonth: true },
+    { day: 31, month: 'Nov', isCurrentMonth: true },
+    { day: 1, month: 'Dec' },
+    { day: 2, month: 'Dec' },
+    { day: 3, month: 'Dec' },
+    { day: 4, month: 'Dec' },
+    { day: 5, month: 'Dec' },
+    { day: 6, month: 'Dec' },
+    { day: 7, month: 'Dec' },
+  ].map(day => ({
+    ...day,
+    isToday: day.day === 1 && day.month === 'Nov',
+    isSelected: day.day === 1 && day.month === 'Nov'
+  }));
 
   // Fetch census data
   useEffect(() => {
@@ -94,6 +166,42 @@ const Dashboard = () => {
             female: 169185643,
             urban: 273975139,
             rural: 56843442
+          },
+          {
+            rank: 4,
+            country: "Indonesia",
+            population: 280422728,
+            male: 135337011,
+            female: 134266419,
+            urban: 158327668,
+            rural: 118034120
+          },
+          {
+            rank: 5,
+            country: "Pakistan",
+            population: 231352049,
+            male: 106318122,
+            female: 101344632,
+            urban: 84314853,
+            rural: 140885078
+          },
+          {
+            rank: 6,
+            country: "Brazil",
+            population: 216132758,
+            male: 7357736,
+            female: 7027050,
+            urban: 187973657,
+            rural: 27304243
+          },
+          {
+            rank: 7,
+            country: "Nigeria",
+            population: 218770604,
+            male: 30462148,
+            female: 28274149,
+            urban: 111505415,
+            rural: 99895289
           }
         ]);
       }
@@ -105,6 +213,21 @@ const Dashboard = () => {
   // Format large numbers with commas
   const formatNumber = (num) => {
     return num.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+  };
+
+  /**
+   * Renders a progress bar for the countries by land area section
+   * @param {number} area - Land area value
+   * @param {number} maxArea - Maximum land area for scaling
+   * @returns {JSX.Element} Progress bar element
+   */
+  const renderAreaBar = (area, maxArea = 17000000) => {
+    const percentage = (area / maxArea) * 100;
+    return (
+      <div className="area-bar-container">
+        <div className="area-bar" style={{ width: `${percentage}%` }}></div>
+      </div>
+    );
   };
 
   // Early return with just the loader while loading
@@ -119,25 +242,34 @@ const Dashboard = () => {
   return (
     <div className="dashboard-container">
       <div className="main-content">
-        {/* Current World Population */}
-        <div className="population-overview">
-          <div className="main-population-card">
-            <h2 className="card-subtitle">Current World Population</h2>
-            <h1 className="population-total">{formatNumber(worldPopulation.total)}</h1>
+        {/* Top row: population overview */}
+        <div className="dashboard-grid">
+          {/* Current World Population */}
+          <div className="grid-item world-population-card">
+            <div className="card-content">
+              <h2 className="card-subtitle">Current World Population</h2>
+              <h1 className="population-total">{formatNumber(worldPopulation.total)}</h1>
+            </div>
           </div>
           
           {/* Population by Age Group */}
-          <div className="demographics-grid">
+          <div className="grid-item demographics-card">
             <DemographicsCard 
               title="Population aged 15-64" 
               value={`${worldPopulation.working}%`}
               color="indigo" 
             />
+          </div>
+          
+          <div className="grid-item demographics-card">
             <DemographicsCard 
               title="Population aged 65+" 
               value={`${worldPopulation.elderly}%`}
               color="rose" 
             />
+          </div>
+          
+          <div className="grid-item demographics-card">
             <DemographicsCard 
               title="Population aged 0-14" 
               value={`${worldPopulation.youth}%`}
@@ -146,45 +278,103 @@ const Dashboard = () => {
           </div>
         </div>
         
-        {/* Daily statistics */}
-        <div className="stats-grid">
-          <div className="stats-card birth">
-            <div className="stats-content">
-              <h3 className="stats-title">Birth Today</h3>
-              <p className="stats-value">{formatNumber(worldPopulation.birthToday)}</p>
+        {/* Middle row: statistics and chart */}
+        <div className="dashboard-middle-section">
+          <div className="dashboard-left-column">
+            {/* Daily statistics */}
+            <div className="stats-column">
+              <div className="stat-card birth-card">
+                <div className="stat-content">
+                  <h3 className="stat-title">Birth Today</h3>
+                  <p className="stat-value">{formatNumber(worldPopulation.birthToday)}</p>
+                  <div className="stat-graph">
+                    <div className="line-wave birth-wave"></div>
+                    <div className="stat-percentage">7.2%</div>
+                  </div>
+                </div>
+              </div>
+              
+              <div className="stat-card death-card">
+                <div className="stat-content">
+                  <h3 className="stat-title">Deaths Today</h3>
+                  <p className="stat-value">{formatNumber(worldPopulation.deathsToday)}</p>
+                  <div className="stat-graph">
+                    <div className="line-wave death-wave"></div>
+                    <div className="stat-percentage">7.2%</div>
+                  </div>
+                </div>
+              </div>
+              
+              <div className="stat-card growth-card">
+                <div className="stat-content">
+                  <h3 className="stat-title">Population Growth Today</h3>
+                  <p className="stat-value">{formatNumber(worldPopulation.populationGrowthToday)}</p>
+                  <div className="stat-graph">
+                    <div className="line-wave growth-wave"></div>
+                    <div className="stat-percentage">7.2%</div>
+                  </div>
+                </div>
+              </div>
             </div>
-            <div className="stats-icon">👶</div>
+            
+            {/* Top Countries by Land Area */}
+            <div className="countries-by-area-card">
+              <h3 className="card-title">Top 10 Countries by Land Area (km²)</h3>
+              <div className="countries-area-list">
+                {topCountriesByLandArea.map((country, index) => (
+                  <div className="country-area-item" key={index}>
+                    <div className="country-area-name">{country.country}</div>
+                    <div className="country-area-bar">
+                      {renderAreaBar(country.area)}
+                    </div>
+                    <div className="country-area-value">{formatNumber(country.area)}</div>
+                  </div>
+                ))}
+              </div>
+            </div>
+            
+            {/* Calendar */}
+            <div className="calendar-card">
+              <div className="calendar-header">
+                <h3 className="calendar-title">{currentMonth}</h3>
+                <button className="calendar-button">
+                  <Calendar size={18} />
+                </button>
+              </div>
+              <div className="calendar-weekdays">
+                <div className="weekday">Mon</div>
+                <div className="weekday">Tue</div>
+                <div className="weekday">Wed</div>
+                <div className="weekday">Thu</div>
+                <div className="weekday">Fri</div>
+                <div className="weekday">Sat</div>
+                <div className="weekday">Sun</div>
+              </div>
+              <div className="calendar-days">
+                {calendarDays.slice(0, 35).map((day, index) => (
+                  <div 
+                    key={index} 
+                    className={`calendar-day ${!day.isCurrentMonth ? 'other-month' : ''} ${day.isToday ? 'today' : ''} ${day.isSelected ? 'selected' : ''}`}
+                  >
+                    {day.day}
+                  </div>
+                ))}
+              </div>
+            </div>
           </div>
           
-          <div className="stats-card death">
-            <div className="stats-content">
-              <h3 className="stats-title">Deaths Today</h3>
-              <p className="stats-value">{formatNumber(worldPopulation.deathsToday)}</p>
+          <div className="dashboard-right-column">
+            {/* Population Growth Chart */}
+            <div className="chart-card">
+              <PopulationGrowthChart />
             </div>
-            <div className="stats-icon">💔</div>
-          </div>
-          
-          <div className="stats-card growth">
-            <div className="stats-content">
-              <h3 className="stats-title">Population Growth Today</h3>
-              <p className="stats-value">{formatNumber(worldPopulation.populationGrowthToday)}</p>
+            
+            {/* Top Countries Table */}
+            <div className="countries-table-card">
+              <h3 className="card-title">Top 10 Largest Countries By Population (LIVE)</h3>
+              <CountryTable countries={topCountries} />
             </div>
-            <div className="stats-icon">📈</div>
           </div>
-        </div>
-        
-        {/* Population Growth Chart */}
-        <div className="chart-section">
-          <h3 className="card-title">World Population Growth</h3>
-          <div className="chart-container">
-            <PopulationGrowthChart />
-          </div>
-        </div>
-        
-        {/* Top Countries Table */}
-        <div className="table-section">
-          <h3 className="card-title">Top 10 Largest Countries By Population (LIVE)</h3>
-          <CountryTable countries={topCountries} />
         </div>
       </div>
     </div>
