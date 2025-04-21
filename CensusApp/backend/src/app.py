@@ -22,23 +22,17 @@ CORS(app, resources={r"/api/*": {"origins": "*", "supports_credentials": False}}
 
 # Configure logging
 logging.basicConfig(
-    level=logging.DEBUG,
+    level=logging.INFO,  # Change from DEBUG to INFO for app-level logs
     format='%(asctime)s | %(name)s | %(levelname)s | %(message)s',
     datefmt='%Y-%m-%d %H:%M:%S'
 )
+
 # Create a logger for the application
 logger = logging.getLogger(__name__)
+logger.setLevel(logging.DEBUG)  # Keep your app's logger at DEBUG level
 
-# Add file handler for logging
-log_dir = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'logs')
-os.makedirs(log_dir, exist_ok=True)
-file_handler = RotatingFileHandler(
-    os.path.join(log_dir, 'app.log'),
-    maxBytes=10485760,  # 10MB
-    backupCount=5
-)
-file_handler.setFormatter(logging.Formatter('%(asctime)s | %(name)s | %(levelname)s | %(message)s'))
-logger.addHandler(file_handler)
+# Set watchdog module to only show WARNING and above
+logging.getLogger('watchdog').setLevel(logging.WARNING)
 
 # Register error handler
 @app.errorhandler(Exception)

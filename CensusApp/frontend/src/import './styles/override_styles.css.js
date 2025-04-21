@@ -13,6 +13,7 @@ import { ROUTES } from './config/Routes';
 import Layout from './components/common/Layout/Layout';
 import { UserProvider } from './contexts/UserContext';
 import { cleanClerkUrlParams } from './utils/clerkUtils';
+import './styles/override_styles.css';
 
 
 function App() {

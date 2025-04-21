@@ -1,12 +1,13 @@
 .demographics-card {
   border-radius: 0.75rem;
   padding: 1.25rem;
-  border-width: 1px;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  border: 1px solid #e0e0e0;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+  border-radius: 10px;
 }
 
 .demographics-content {
-  margin-bottom: 1rem;
+  margin-bottom: 1.5rem;
 }
 
 .demographics-title {
@@ -15,20 +16,22 @@
   margin-bottom: 0.5rem;
 }
 
-.demographics-value {
-  font-size: 2.5rem;
-  font-weight: 700;
-  line-height: 1;
+.demographics-value {  
+  font-size: 1.75rem;  
+  font-weight: bold;  
+  line-height: 1;  
 }
 
 .progress-bar {
   height: 0.5rem;
   border-radius: 9999px;
   overflow: hidden;
+  background-color: #e0d6f6;
+  margin-top: 0.75rem;
 }
 
 .progress-fill {
   height: 100%;
   border-radius: 9999px;
-  transition: width 0.5s ease;
+  background-color: #7b36ed;
 }
