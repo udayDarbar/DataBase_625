@@ -1,0 +1,73 @@
+.country-table-container {
+  width: 100%;
+  overflow-x: auto;
+}
+
+.country-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.875rem;
+}
+
+.country-table th, 
+.country-table td {
+  padding: 0.75rem 1rem;
+  text-align: left;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.country-table th {
+  font-weight: 600;
+  color: #374151;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.country-table th:hover {
+  background-color: #f9fafb;
+}
+
+.country-table th.sorted {
+  background-color: #f3f4f6;
+}
+
+.country-table tbody tr:hover {
+  background-color: #f9fafb;
+}
+
+.country-flag {
+  width: 1.5rem;
+  height: 1rem;
+  margin-right: 0.5rem;
+  vertical-align: middle;
+  object-fit: cover;
+  border-radius: 2px;
+}
+
+.rank-cell {
+  width: 2rem;
+  text-align: center;
+  font-weight: 600;
+}
+
+.country-cell {
+  font-weight: 500;
+  min-width: 150px;
+}
+
+.population-cell {
+  font-weight: 600;
+}
+
+.empty-message {
+  text-align: center;
+  color: #6b7280;
+  padding: 2rem 0;
+}
+
+@media screen and (max-width: 768px) {
+  .country-table th, 
+  .country-table td {
+    padding: 0.5rem;
+  }
+}

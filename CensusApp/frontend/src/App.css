@@ -1,0 +1,128 @@
+/* App.css */
+
+/* Root variables for consistent sizing and spacing */
+:root {
+  --sidebar-width: 16rem;
+  --header-height: 77px;
+  --primary-bg: rgb(249 250 251);
+  --border-color: rgb(229 231 235);
+}
+
+/* Main layout structure */
+.app-wrapper {
+  display: flex;
+  min-height: 100vh;
+}
+
+/* Main content wrapper with sidebar margin */
+.main-content-wrapper {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  margin-left: var(--sidebar-width);
+  min-width: 0;
+}
+
+/* Common layout styles for all pages */
+.dashboard-container {
+  min-height: 100vh;
+  background-color: var(--primary-bg);
+  overflow-x: hidden;
+  width: 100%;
+}
+
+/* Main content padding and width */
+.main-content {
+  width: 100%;
+  padding: 1.5rem;
+}
+
+/* Controls container for action buttons and switches */
+.controls-container {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+  width: 100%;
+}
+
+/* Content area with header offset */
+.content-area {
+  flex: 1;
+  padding-top: var(--header-height);
+  background-color: var(--primary-bg);
+  width: 100%;
+  min-height: calc(100vh - var(--header-height));
+}
+
+/* Card styles */
+.card {
+  background-color: white;
+  border-radius: 0.5rem;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  padding: 1.25rem;
+  margin-bottom: 1rem;
+}
+
+.card-header {
+  font-size: 1.125rem;
+  font-weight: 600;
+  color: #333;
+  margin-bottom: 1rem;
+}
+
+/* Demographics cards layout */
+.demographics-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+}
+
+/* Population cards */
+.population-card {
+  background-color: white;
+  border-radius: 0.5rem;
+  padding: 1rem;
+  display: flex;
+  flex-direction: column;
+}
+
+.population-card-title {
+  font-size: 0.875rem;
+  color: #6b7280;
+  margin-bottom: 0.5rem;
+}
+
+.population-card-value {
+  font-size: 2rem;
+  font-weight: 700;
+  margin-bottom: 0.5rem;
+}
+
+.population-card-percentage {
+  font-size: 1.5rem;
+  font-weight: 600;
+}
+
+/* Responsive breakpoints */
+@media screen and (max-width: 1024px) {
+  .demographics-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media screen and (max-width: 768px) {
+  .main-content-wrapper {
+    margin-left: 0;
+  }
+
+  .main-content {
+    padding: 1rem;
+  }
+  
+  .demographics-grid {
+    grid-template-columns: 1fr;
+  }
+}
