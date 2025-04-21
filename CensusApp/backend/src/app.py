@@ -1,9 +1,10 @@
-from flask import Flask
+from flask import Flask, jsonify, request
 from flask_cors import CORS
 from dotenv import load_dotenv
 import logging
 from logging.handlers import RotatingFileHandler
 import os
+import traceback
 from db.database_initializer import DatabaseInitializer
 
 # Import blueprints
@@ -16,7 +17,7 @@ load_dotenv()
 # Initialize Flask app
 app = Flask(__name__)
 
-# Configure CORS properly
+# Configure CORS - Allow requests from all origins for development
 CORS(app, resources={r"/api/*": {"origins": "*", "supports_credentials": False}})
 
 # Configure logging
@@ -27,6 +28,38 @@ logging.basicConfig(
 )
 # Create a logger for the application
 logger = logging.getLogger(__name__)
+
+# Add file handler for logging
+log_dir = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'logs')
+os.makedirs(log_dir, exist_ok=True)
+file_handler = RotatingFileHandler(
+    os.path.join(log_dir, 'app.log'),
+    maxBytes=10485760,  # 10MB
+    backupCount=5
+)
+file_handler.setFormatter(logging.Formatter('%(asctime)s | %(name)s | %(levelname)s | %(message)s'))
+logger.addHandler(file_handler)
+
+# Register error handler
+@app.errorhandler(Exception)
+def handle_error(e):
+    logger.error(f"Unhandled error: {str(e)}")
+    logger.error(traceback.format_exc())
+    
+    response = {
+        "error": str(e),
+        "message": "An unexpected error occurred. Please try again later."
+    }
+    
+    # Return different status code based on exception type
+    if isinstance(e, ValueError):
+        return jsonify(response), 400
+    elif isinstance(e, KeyError):
+        return jsonify(response), 400
+    elif isinstance(e, FileNotFoundError):
+        return jsonify(response), 404
+    
+    return jsonify(response), 500
 
 # Register blueprints
 app.register_blueprint(external_api_bp)
@@ -42,5 +75,10 @@ def index():
         'message': 'Census Population Dashboard API is running'
     }
 
+# Add health check endpoint
+@app.route('/health')
+def health_check():
+    return jsonify({'status': 'ok', 'service': 'census-api'})
+
 if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=5000)
+    app.run(host="0.0.0.0", port=5000, debug=True)

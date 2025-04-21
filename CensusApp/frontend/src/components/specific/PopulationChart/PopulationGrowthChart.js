@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   LineChart, 
   Line, 
@@ -9,48 +9,83 @@ import {
   Legend, 
   ResponsiveContainer 
 } from 'recharts';
+import axios from 'axios';
 import './PopulationGrowthChart.css';
 
-// Sample data - this would typically come from an API
-const sampleData = [
-  { year: '1700', births: 0.6, deaths: 0.5, growth: 0.1, total: 0.6 },
-  { year: '1750', births: 0.8, deaths: 0.7, growth: 0.1, total: 0.8 },
-  { year: '1800', births: 1.0, deaths: 0.9, growth: 0.1, total: 1.0 },
-  { year: '1850', births: 1.3, deaths: 1.1, growth: 0.2, total: 1.3 },
-  { year: '1900', births: 1.7, deaths: 1.5, growth: 0.2, total: 1.7 },
-  { year: '1950', births: 2.5, deaths: 2.0, growth: 0.5, total: 2.5 },
-  { year: '2000', births: 6.2, deaths: 4.0, growth: 2.2, total: 6.2 },
-  { year: '2020', births: 9.5, deaths: 5.0, growth: 4.0, total: 9.5 },
-  { year: '2050', births: 11.7, deaths: 6.8, growth: 4.9, total: 11.7 },
-];
+// API URL from environment variables
+const REACT_APP_API_URL = process.env.REACT_APP_API_URL;
 
 /**
  * Population growth chart component
+ * @param {Object} props - Component props
+ * @param {number} props.selectedYear - Selected census year
  * @returns {JSX.Element} Chart component with time range controls
  */
-const PopulationGrowthChart = () => {
+const PopulationGrowthChart = ({ selectedYear }) => {
   const [timeRange, setTimeRange] = useState('all');
+  const [populationData, setPopulationData] = useState([]);
+  const [loading, setLoading] = useState(true);
+  
+  // Fetch population trend data
+  useEffect(() => {
+    const fetchTrendData = async () => {
+      try {
+        setLoading(true);
+        const response = await axios.get(`${REACT_APP_API_URL}/api/population/trend`, {
+          params: { 
+            end_year: selectedYear,
+            start_year: selectedYear - 10, // Past 10 years
+            include_sample: true // Include sample historical data if available
+          }
+        });
+        
+        if (response.data && response.data.length > 0) {
+          setPopulationData(response.data);
+        }
+        setLoading(false);
+      } catch (err) {
+        console.error('Error fetching population trend data:', err);
+        // Use sample data as fallback
+        setPopulationData([
+          { year: '1700', births: 0.6, deaths: 0.5, growth: 0.1, total: 0.6 },
+          { year: '1750', births: 0.8, deaths: 0.7, growth: 0.1, total: 0.8 },
+          { year: '1800', births: 1.0, deaths: 0.9, growth: 0.1, total: 1.0 },
+          { year: '1850', births: 1.3, deaths: 1.1, growth: 0.2, total: 1.3 },
+          { year: '1900', births: 1.7, deaths: 1.5, growth: 0.2, total: 1.7 },
+          { year: '1950', births: 2.5, deaths: 2.0, growth: 0.5, total: 2.5 },
+          { year: '2000', births: 6.2, deaths: 4.0, growth: 2.2, total: 6.2 },
+          { year: '2020', births: 9.5, deaths: 5.0, growth: 4.0, total: 9.5 },
+          { year: '2050', births: 11.7, deaths: 6.8, growth: 4.9, total: 11.7 },
+        ]);
+        setLoading(false);
+      }
+    };
+    
+    fetchTrendData();
+  }, [selectedYear]);
   
   // Filter data based on selected time range
   const getFilteredData = () => {
+    if (populationData.length === 0) return [];
+    
     switch (timeRange) {
       case '1d':
-        return sampleData.slice(-2);
+        return populationData.slice(-2);
       case '1w':
-        return sampleData.slice(-3);
+        return populationData.slice(-3);
       case '1m':
-        return sampleData.slice(-4);
+        return populationData.slice(-4);
       case '3m':
-        return sampleData.slice(-5);
+        return populationData.slice(-5);
       case '6m':
-        return sampleData.slice(-6);
+        return populationData.slice(-6);
       case '1y':
-        return sampleData.slice(-7);
+        return populationData.slice(-7);
       case '5y':
-        return sampleData.slice(-8);
+        return populationData.slice(-8);
       case 'all':
       default:
-        return sampleData;
+        return populationData;
     }
   };
   
@@ -79,6 +114,10 @@ const PopulationGrowthChart = () => {
     }
     return null;
   };
+
+  if (loading) {
+    return <div className="chart-loading">Loading population data...</div>;
+  }
 
   return (
     <div className="chart-wrapper">

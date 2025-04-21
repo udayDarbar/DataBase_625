@@ -312,6 +312,58 @@
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
 }
 
+/* Add this to your Dashboard.css file */
+
+.year-selector {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 1.5rem;
+  font-weight: 500;
+}
+
+.year-select {
+  padding: 0.35rem 0.75rem;
+  border-radius: 0.25rem;
+  border: 1px solid #e5e7eb;
+  background-color: white;
+  font-size: 0.95rem;
+  color: #111827;
+  cursor: pointer;
+  min-width: 100px;
+}
+
+.year-select:focus {
+  outline: none;
+  border-color: #6366f1;
+  box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.1);
+}
+
+.year-selector {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 1.5rem;
+  font-weight: 500;
+}
+
+.year-select {
+  padding: 0.35rem 0.75rem;
+  border-radius: 0.25rem;
+  border: 1px solid #e5e7eb;
+  background-color: white;
+  font-size: 0.95rem;
+  color: #111827;
+  cursor: pointer;
+  min-width: 100px;
+}
+
+.year-select:focus {
+  outline: none;
+  border-color: #6366f1;
+  box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.1);
+}
+
 /* Responsive adjustments */
 @media screen and (max-width: 1280px) {
   .dashboard-grid {
