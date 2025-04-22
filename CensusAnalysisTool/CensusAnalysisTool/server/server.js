@@ -213,6 +213,25 @@ app.post('/api/execute-procedure', authMiddleware, async (req, res) => {
   }
 });
 
+// New endpoint to execute stored procedure with parameters
+app.post('/api/procedure/:procedure', async (req, res) => {
+  const { procedure } = req.params;
+  const params = req.body;
+
+  try {
+    const request = new sql.Request();
+    Object.keys(params).forEach(key => {
+      request.input(key, params[key]);
+    });
+
+    const result = await request.execute(procedure);
+    res.json(result.recordset);
+  } catch (error) {
+    console.error('Error executing procedure:', error);
+    res.status(500).send('Error executing procedure');
+  }
+});
+
 // Serve static files from the parent directory
 app.use(express.static('../'));
 
