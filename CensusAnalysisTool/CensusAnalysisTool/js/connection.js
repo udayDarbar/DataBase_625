@@ -2,7 +2,7 @@
  * Census Data Analysis Tool
  * Session Management and Procedure Execution
  */
-
+const API_BASE_URL = 'http://localhost:3000';
 // Global connection state object
 const connectionState = {
     isConnected: false,
@@ -51,40 +51,28 @@ function initApplication() {
  * Check if user has an active session
  */
 function checkUserSession() {
-    fetch('/api/session', {
-        credentials: 'include'
-    })
-    .then(response => response.json())
-    .then(data => {
-        if (!data.success || !data.user) {
-            // Not logged in, redirect to login page
-            window.location.href = 'login.html';
-            return;
-        }
-        
-        // Update connection state
-        connectionState.isConnected = true;
-        connectionState.userRole = data.user.role;
-        connectionState.username = data.user.username;
-        
-        // Update UI
-        updateConnectionStatus(true);
-        updateUserInfo(data.user);
-        updateUIForRole(data.user.role);
-        
-        // Enable procedure selection
-        enableProcedureSelection();
-        
-        // Select first procedure by default
-        if (procedureList.querySelector('li')) {
-            procedureList.querySelector('li').click();
-        }
-    })
-    .catch(error => {
-        console.error('Session check error:', error);
-        window.location.href = 'login.html';
+    // Simulate a successful session check
+    connectionState.isConnected = true;
+    connectionState.userRole = 'admin'; // You can set this to 'viewer' or 'admin'
+    connectionState.username = 'TestUser'; // Simulated username
+
+    // Update UI
+    updateConnectionStatus(true);
+    updateUserInfo({
+        username: connectionState.username,
+        role: connectionState.userRole
     });
+    updateUIForRole(connectionState.userRole);
+
+    // Enable procedure selection
+    enableProcedureSelection();
+
+    // Select the first procedure by default
+    if (procedureList.querySelector('li')) {
+        procedureList.querySelector('li').click();
+    }
 }
+
 
 /**
  * Update user information in sidebar
@@ -134,7 +122,7 @@ function updateUIForRole(role) {
  * Handle logout button click
  */
 function handleLogout() {
-    fetch('/api/logout', {
+    fetch(`${API_BASE_URL}/api/logout`, {
         method: 'POST',
         credentials: 'include'
     })
@@ -152,6 +140,7 @@ function handleLogout() {
         showNotification('error', 'An error occurred during logout');
     });
 }
+
 
 /**
  * Enable procedure selection in the sidebar
