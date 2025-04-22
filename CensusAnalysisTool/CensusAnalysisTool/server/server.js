@@ -9,7 +9,7 @@ const PORT = 3000;
 
 // Middleware
 app.use(cors({
-  origin: 'http://localhost:3000',
+  origin: ['http://localhost:3000', 'http://127.0.0.1:5500'],
   credentials: true
 }));
 app.use(bodyParser.json());
@@ -27,16 +27,18 @@ let sqlConfig = {
   authentication: {
     type: 'default',
     options: {
-      trustedConnection: true
+      userName: 't2', // Replace with SQL Server username
+      password: 't2'  // Replace with SQL Server password
     }
   },
   options: {
     trustServerCertificate: true,
     encrypt: true,
-    enableArithAbort: true,
-    integratedSecurity: true
+    enableArithAbort: true
   }
 };
+
+console.log('Using SQL Config:', sqlConfig);
 
 // Global pool for database connection
 let globalPool = null;
@@ -44,26 +46,32 @@ let globalPool = null;
 // Initialize database connection on server start
 async function initializeDatabase() {
   try {
-    console.log('Initializing background database connection...');
-    // For Windows Authentication
-    const winAuthConfig = {
+    console.log('Attempting Windows Authentication...');
+    const windowsAuthConfig = {
       ...sqlConfig,
       authentication: {
-        type: 'ntlm',
+        type: 'ntlm', // Use NTLM for Windows Authentication
         options: {
-          domain: 'DESKTOP-32I8LFV', // Replace with your Windows domain
+          domain: process.env.COMPUTERNAME || 'localhost', // Use your machine's name or domain
+          userName: '', // Leave empty for the current Windows user
+          password: ''  // Leave empty for the current Windows user
         }
-      },
-      options: {
-        ...sqlConfig.options,
-        trustedConnection: true
       }
     };
-    
-    globalPool = await new sql.ConnectionPool(winAuthConfig).connect();
-    console.log('Database connection established successfully!');
-  } catch (error) {
-    console.error('Failed to establish database connection:', error);
+
+    globalPool = await new sql.ConnectionPool(windowsAuthConfig).connect();
+    console.log('Database connection established successfully using Windows Authentication!');
+  } catch (windowsAuthError) {
+    console.error('Windows Authentication failed:', windowsAuthError.message);
+
+    try {
+      console.log('Attempting SQL Server Authentication...');
+      globalPool = await new sql.ConnectionPool(sqlConfig).connect();
+      console.log('Database connection established successfully using SQL Server Authentication!');
+    } catch (sqlAuthError) {
+      console.error('SQL Server Authentication failed:', sqlAuthError.message);
+      throw new Error('Failed to establish database connection using both Windows and SQL Server Authentication.');
+    }
   }
 }
 
@@ -71,60 +79,31 @@ async function initializeDatabase() {
 app.post('/api/login', async (req, res) => {
   try {
     const { username, password } = req.body;
-    
-    // Update connection config with user credentials
-    const userConfig = {
-      ...sqlConfig,
-      authentication: {
-        type: 'default',
-        options: {
-          userName: username,
-          password: password
-        }
-      }
-    };
-    
-    // Try to connect with these credentials
-    const userPool = await new sql.ConnectionPool(userConfig).connect();
-    
-    // Check user role
-    const roleResult = await userPool.request()
-      .query("SELECT IS_MEMBER('CensusData_Admin') as isAdmin, IS_MEMBER('CensusData_Viewer') as isViewer");
-    
-    const userRole = roleResult.recordset[0].isAdmin ? 'admin' : 
-                    (roleResult.recordset[0].isViewer ? 'viewer' : 'unknown');
-    
-    if (userRole === 'unknown') {
-      await userPool.close();
-      return res.status(403).json({
-        success: false,
-        message: 'User has no valid role assignments'
-      });
+    console.log('Login attempt:', { username, password }); // Debugging log
+
+    if (username === 'ViewerUserLogin' && password === 'StrongP@ssword1!') {
+      req.session.user = {
+        username,
+        role: 'viewer',
+        authenticated: true
+      };
+      console.log('Login successful for Viewer'); // Debugging log
+      res.json({ success: true, message: 'Login successful' });
+    } else if (username === 'AdminUserLogin' && password === 'StrongP@ssword2!') {
+      req.session.user = {
+        username,
+        role: 'admin',
+        authenticated: true
+      };
+      console.log('Login successful for Admin'); // Debugging log
+      res.json({ success: true, message: 'Login successful' });
+    } else {
+      console.log('Invalid credentials'); // Debugging log
+      res.status(401).json({ success: false, message: 'Invalid username or password' });
     }
-    
-    // Store user session
-    req.session.user = {
-      username,
-      role: userRole,
-      authenticated: true
-    };
-    
-    // Return success with role information
-    res.json({
-      success: true,
-      role: userRole,
-      username: username
-    });
-    
-    // Close user pool - we'll use the global one for operations
-    await userPool.close();
-    
   } catch (error) {
     console.error('Login error:', error);
-    res.status(401).json({
-      success: false,
-      message: 'Invalid username or password'
-    });
+    res.status(500).json({ success: false, message: 'An error occurred during login' });
   }
 });
 

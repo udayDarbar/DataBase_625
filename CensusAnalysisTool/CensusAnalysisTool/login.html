@@ -138,50 +138,54 @@
         document.addEventListener('DOMContentLoaded', function() {
             const loginForm = document.getElementById('login-form');
             const errorMessage = document.getElementById('error-message');
-            
+
             // Check if user is already logged in
-            fetch('/api/session')
-                .then(response => response.json())
-                .then(data => {
-                    if (data.success && data.user) {
-                        // Redirect to main application
-                        window.location.href = 'index.html';
-                    }
-                });
-            
+            fetch('http://localhost:3000/api/session', {
+                method: 'GET',
+                credentials: 'include' // Include cookies for session handling
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    // Redirect to index.html if the user is already logged in
+                    window.location.href = 'index.html';
+                }
+            })
+            .catch(error => console.error('Session error:', error));
+
             loginForm.addEventListener('submit', function(event) {
                 event.preventDefault();
-                
+
                 const username = document.getElementById('username').value;
                 const password = document.getElementById('password').value;
-                
+
                 // Hide previous error
                 errorMessage.style.display = 'none';
-                
+
                 // Send login request
-                fetch('/api/login', {
+                fetch('http://localhost:3000/api/login', {
                     method: 'POST',
                     headers: {
-                        'Content-Type': 'application/json'
+                        'Content-Type': 'application/json',
                     },
                     body: JSON.stringify({ username, password }),
-                    credentials: 'include'
+                    credentials: 'include', // Include session cookies
                 })
                 .then(response => response.json())
                 .then(data => {
                     if (data.success) {
-                        // Redirect to main application
+                        // Redirect to index.html on successful login
                         window.location.href = 'index.html';
                     } else {
-                        // Show error message
-                        errorMessage.textContent = data.message || 'Login failed';
+                        // Display error message on login failure
+                        errorMessage.textContent = data.message || 'Login failed. Please try again.';
                         errorMessage.style.display = 'block';
                     }
                 })
                 .catch(error => {
-                    errorMessage.textContent = 'An error occurred. Please try again.';
-                    errorMessage.style.display = 'block';
                     console.error('Login error:', error);
+                    errorMessage.textContent = 'An error occurred. Please try again later.';
+                    errorMessage.style.display = 'block';
                 });
             });
         });
