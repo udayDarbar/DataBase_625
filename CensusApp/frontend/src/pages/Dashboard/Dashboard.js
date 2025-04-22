@@ -20,9 +20,10 @@ const Dashboard = () => {
   const [error, setError] = useState(null);
   const [worldPopulation, setWorldPopulation] = useState({
     total: 0,
-    workingPercentage: 0,
-    elderlyPercentage: 0,
-    youthPercentage: 0,
+    // Ethnicity demographics data
+    whitePercentage: 0,
+    blackPercentage: 0, 
+    hispanicPercentage: 0,
     birthsToday: 0,
     deathsToday: 0,
     populationGrowthToday: 0
@@ -144,9 +145,10 @@ const Dashboard = () => {
         // Fetch population overview data
         let populationData = {
           total_population: 7981681536,
-          working_age_percentage: 65.0,
-          elderly_percentage: 10.0,
-          youth_percentage: 25.0,
+          // New ethnicity percentages - fallback values if API doesn't provide them
+          white_percentage: 61.6,
+          black_percentage: 12.4,
+          hispanic_percentage: 18.7,
           births_today: 180295,
           deaths_today: 80295,
           growth_today: 105295
@@ -165,9 +167,11 @@ const Dashboard = () => {
         
         setWorldPopulation({
           total: populationData.total_population || 0,
-          workingPercentage: populationData.working_age_percentage || 0,
-          elderlyPercentage: populationData.elderly_percentage || 0,
-          youthPercentage: populationData.youth_percentage || 0,
+          // Set ethnicity percentages
+          whitePercentage: populationData.white_percentage || 61.6,
+          blackPercentage: populationData.black_percentage || 12.4,
+          hispanicPercentage: populationData.hispanic_percentage || 18.7,
+          // Other data
           birthsToday: populationData.births_today || 0,
           deathsToday: populationData.deaths_today || 0,
           populationGrowthToday: populationData.growth_today || 0
@@ -214,7 +218,7 @@ const Dashboard = () => {
         setTopStates(transformedStates);
         
         // Create area data for visualization
-        let areaData = []; // Using let instead of const
+        let areaData = [];
         if (statesData && statesData.length > 0) {
           // For this example, we'll use population as a proxy for area
           areaData = statesData
@@ -306,27 +310,27 @@ const Dashboard = () => {
             </div>
           </div>
           
-          {/* Population by Age Group */}
+          {/* Population by Ethnicity - MODIFIED SECTION */}
           <div className="grid-item demographics-card">
             <DemographicsCard 
-              title="Population aged 15-64" 
-              value={`${worldPopulation.workingPercentage}%`}
+              title="Caucasian Population" 
+              value={`${worldPopulation.whitePercentage}%`}
               color="indigo" 
             />
           </div>
           
           <div className="grid-item demographics-card">
             <DemographicsCard 
-              title="Population aged 65+" 
-              value={`${worldPopulation.elderlyPercentage}%`}
+              title="African American Population" 
+              value={`${worldPopulation.blackPercentage}%`}
               color="rose" 
             />
           </div>
           
           <div className="grid-item demographics-card">
             <DemographicsCard 
-              title="Population aged 0-14" 
-              value={`${worldPopulation.youthPercentage}%`}
+              title="Hispanic/Latino Popualation" 
+              value={`${worldPopulation.hispanicPercentage}%`}
               color="amber" 
             />
           </div>

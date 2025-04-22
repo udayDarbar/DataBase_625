@@ -4,9 +4,11 @@ from db.database_manager import DatabaseManager
 from db.mysql_connection import get_mysql_connection
 import os
 from datetime import datetime
+from services.census_service import CensusService
 
 internal_api_bp = Blueprint("internal_api", __name__)
 database_service = DatabaseManager()
+census_service = CensusService()
 logger = logging.getLogger(__name__)
 
 @internal_api_bp.route("/api/save-user", methods=["POST"])
@@ -152,27 +154,32 @@ def get_population_by_state():
 @internal_api_bp.route("/api/population/overview", methods=["GET"])
 def get_population_overview():
     """
-    Get overall population statistics
+    Get overall population statistics including ethnicity data
     """
     try:
         year = request.args.get('year', default=2020, type=int)
-        # Use the database service's get_population_overview method
-        # which may be defined in services/census_service.py
         
-        # For now, return sample data structure
+        # Use the census service to get the data with ethnicity percentages
+        data = census_service.get_population_overview(year)
+        return jsonify(data)
+    except Exception as e:
+        logger.error(f"Error in population overview: {str(e)}")
+        # Return default values in case of error
         return jsonify({
             "total_population": 7981681536,
             "median_age": 30.9,
             "working_age_percentage": 65.0,
             "elderly_percentage": 10.0,
             "youth_percentage": 25.0,
+            # Ethnicity data
+            "white_percentage": 61.6,
+            "black_percentage": 12.4,
+            "hispanic_percentage": 18.7,
+            # Other data
             "births_today": 180295,
             "deaths_today": 80295,
             "growth_today": 105295
         })
-    except Exception as e:
-        logger.error(f"Error in population overview: {str(e)}")
-        return jsonify({"error": "Failed to fetch population overview"}), 500
 
 @internal_api_bp.route("/api/population/trend", methods=["GET"])
 def get_population_trend():
@@ -183,19 +190,8 @@ def get_population_trend():
         start_year = request.args.get('start_year', default=2010, type=int)
         end_year = request.args.get('end_year', default=2020, type=int)
         
-        # Sample data as a fallback
-        trend_data = [
-            {'year': '1700', 'births': 0.6, 'deaths': 0.5, 'growth': 0.1, 'total': 0.6},
-            {'year': '1750', 'births': 0.8, 'deaths': 0.7, 'growth': 0.1, 'total': 0.8},
-            {'year': '1800', 'births': 1.0, 'deaths': 0.9, 'growth': 0.1, 'total': 1.0},
-            {'year': '1850', 'births': 1.3, 'deaths': 1.1, 'growth': 0.2, 'total': 1.3},
-            {'year': '1900', 'births': 1.7, 'deaths': 1.5, 'growth': 0.2, 'total': 1.7},
-            {'year': '1950', 'births': 2.5, 'deaths': 2.0, 'growth': 0.5, 'total': 2.5},
-            {'year': '2000', 'births': 6.2, 'deaths': 4.0, 'growth': 2.2, 'total': 6.2},
-            {'year': '2020', 'births': 9.5, 'deaths': 5.0, 'growth': 4.0, 'total': 9.5},
-            {'year': '2050', 'births': 11.7, 'deaths': 6.8, 'growth': 4.9, 'total': 11.7}
-        ]
-        
+        # Use census_service for the trend data
+        trend_data = census_service.get_population_trend(start_year, end_year)
         return jsonify(trend_data)
     except Exception as e:
         logger.error(f"Error fetching population trend: {str(e)}")

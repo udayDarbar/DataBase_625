@@ -12,6 +12,7 @@ class CensusService:
     def get_population_overview(self, year=2020):
         """
         Get population overview statistics for a specific year
+        Now includes ethnicity percentages
         """
         try:
             with get_mysql_connection() as conn:
@@ -47,6 +48,29 @@ class CensusService:
                     cursor.execute(sql, (year,))
                     percentages = cursor.fetchone()
                     
+                    # NEW QUERY: Get ethnicity percentages
+                    sql = """
+                    SELECT
+                        SUM(pd.White) as total_white,
+                        SUM(pd.BlackorAfricanAmerican) as total_black,
+                        SUM(pd.HispanicorLatino) as total_hispanic,
+                        SUM(pd.TotalMalePopulation + pd.TotalFemalePopulation) as total_pop
+                    FROM Population_Demographics pd
+                    JOIN Geoid_info gi ON pd.Year = gi.Year
+                        AND pd.StatFP = gi.StatFP
+                        AND pd.CountyFP = gi.CountyFP
+                        AND pd.Tract = gi.Tract
+                    WHERE pd.Year = %s
+                    """
+                    cursor.execute(sql, (year,))
+                    ethnicity_data = cursor.fetchone()
+                    
+                    # Calculate percentage of each ethnicity
+                    total_pop = ethnicity_data['total_pop'] if ethnicity_data and ethnicity_data['total_pop'] > 0 else 1
+                    white_percentage = (ethnicity_data['total_white'] / total_pop) * 100 if ethnicity_data else 61.6
+                    black_percentage = (ethnicity_data['total_black'] / total_pop) * 100 if ethnicity_data else 12.4
+                    hispanic_percentage = (ethnicity_data['total_hispanic'] / total_pop) * 100 if ethnicity_data else 18.7
+                    
                     # Merge and return results
                     return {
                         'total_population': result['total_population'] if result else 0,
@@ -54,9 +78,14 @@ class CensusService:
                         'working_age_percentage': round(percentages['working_age_percentage'], 1) if percentages else 0,
                         'elderly_percentage': round(percentages['elderly_percentage'], 1) if percentages else 0,
                         'youth_percentage': round(percentages['youth_percentage'], 1) if percentages else 0,
-                        'births_today': 180295,  # Placeholder value
-                        'deaths_today': 80295,   # Placeholder value
-                        'growth_today': 105295   # Placeholder value
+                        # Add ethnicity percentages
+                        'white_percentage': round(white_percentage, 1),
+                        'black_percentage': round(black_percentage, 1),
+                        'hispanic_percentage': round(hispanic_percentage, 1),
+                        # Placeholder values
+                        'births_today': 180295,
+                        'deaths_today': 80295,
+                        'growth_today': 105295
                     }
         except Exception as e:
             self.logger.error(f"Error getting population overview: {e}")
@@ -67,6 +96,9 @@ class CensusService:
                 'working_age_percentage': 65.0,
                 'elderly_percentage': 10.0,
                 'youth_percentage': 25.0,
+                'white_percentage': 61.6,
+                'black_percentage': 12.4,
+                'hispanic_percentage': 18.7,
                 'births_today': 180295,
                 'deaths_today': 80295,
                 'growth_today': 105295
