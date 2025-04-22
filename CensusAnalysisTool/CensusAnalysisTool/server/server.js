@@ -218,9 +218,17 @@ app.post('/api/procedure/:procedure', async (req, res) => {
   const { procedure } = req.params;
   const params = req.body;
 
+  if (!globalPool) {
+    console.error('Database connection not available');
+    return res.status(500).json({
+      success: false,
+      message: 'Database connection not available',
+    });
+  }
+
   try {
-    const request = new sql.Request();
-    Object.keys(params).forEach(key => {
+    const request = globalPool.request();
+    Object.keys(params).forEach((key) => {
       request.input(key, params[key]);
     });
 
@@ -236,7 +244,13 @@ app.post('/api/procedure/:procedure', async (req, res) => {
 app.use(express.static('../'));
 
 // Start the server and initialize database
-app.listen(PORT, () => {
-  console.log(`Server running on http://localhost:${PORT}`);
-  initializeDatabase();
-});
+initializeDatabase()
+    .then(() => {
+        app.listen(PORT, () => {
+            console.log(`Server is running on http://localhost:${PORT}`);
+        });
+    })
+    .catch((error) => {
+        console.error('Failed to initialize database:', error.message);
+        process.exit(1); // Exit the process if the database connection fails
+    });
