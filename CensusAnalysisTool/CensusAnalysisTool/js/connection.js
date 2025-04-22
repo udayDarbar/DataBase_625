@@ -1,8 +1,17 @@
 /**
  * Census Data Analysis Tool
  * Session Management and Procedure Execution
+ * 
+ * This script handles:
+ * - User authentication and session management
+ * - Database connection
+ * - Stored procedure execution
+ * - Results display integration
  */
+
+// API endpoint base URL
 const API_BASE_URL = 'http://localhost:3000';
+
 // Global connection state object
 const connectionState = {
     isConnected: false,
@@ -10,13 +19,33 @@ const connectionState = {
     username: null
 };
 
-// DOM elements
+// DOM Elements
 const connectionStatus = document.getElementById('connection-status');
 const procedureList = document.getElementById('procedure-list');
 const procedurePanels = document.querySelectorAll('.procedure-panel');
 const loadingOverlay = document.getElementById('loading-overlay');
 const userInfo = document.getElementById('user-info');
 const logoutButton = document.getElementById('logout-button');
+
+// Define a flag for testing mode
+const isTestingMode = true; // Set to true for testing, false for production
+
+// Pre-defined test users with roles
+const testUsers = {
+    viewer: {
+        username: 'demo',
+        role: 'CensusData_Viewer', // Viewer role
+        authenticated: true
+    },
+    admin: {
+        username: 'uday',
+        role: 'CensusData_Admin', // Admin role
+        authenticated: true
+    }
+};
+
+// Current test user (set to 'viewer' or 'admin' for testing)
+const currentTestUser = testUsers.admin;
 
 /**
  * Initialize application
@@ -33,16 +62,6 @@ function initApplication() {
         form.addEventListener('submit', handleProcedureExecute);
     });
     
-    // Add click handlers for export buttons
-    document.querySelectorAll('.btn-export').forEach(button => {
-        button.addEventListener('click', handleExportResults);
-    });
-    
-    // Add click handlers for clear buttons
-    document.querySelectorAll('.btn-clear').forEach(button => {
-        button.addEventListener('click', handleClearResults);
-    });
-    
     // Logout button handler
     logoutButton.addEventListener('click', handleLogout);
 }
@@ -51,11 +70,76 @@ function initApplication() {
  * Check if user has an active session
  */
 function checkUserSession() {
-    // Simulate a successful session check
-    connectionState.isConnected = true;
-    connectionState.userRole = 'admin'; // You can set this to 'viewer' or 'admin'
-    connectionState.username = 'TestUser'; // Simulated username
+    if (isTestingMode) {
+        console.warn(`Using test user (${currentTestUser.username}) for session in testing mode`);
+        connectionState.isConnected = true;
+        connectionState.userRole = currentTestUser.role;
+        connectionState.username = currentTestUser.username;
 
+        // Update UI
+        updateConnectionStatus(true);
+        updateUserInfo({
+            username: connectionState.username,
+            role: connectionState.userRole
+        });
+        updateUIForRole(connectionState.userRole);
+
+        // Enable procedure selection
+
+        enableProcedureSelection();
+
+        // Select the first procedure by default
+        if (procedureList.querySelector('li')) {
+            procedureList.querySelector('li').click();
+        }
+    } else {
+        // Normal session check logic for production
+        fetch(`${API_BASE_URL}/api/session`, {
+            method: 'GET',
+            credentials: 'include'
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                connectionState.isConnected = true;
+                connectionState.userRole = data.user.role;
+                connectionState.username = data.user.username;
+
+                // Update UI
+                updateConnectionStatus(true);
+                updateUserInfo(data.user);
+                updateUIForRole(data.user.role);
+
+                // Enable procedure selection
+                enableProcedureSelection();
+
+                // Select the first procedure by default
+                if (procedureList.querySelector('li')) {
+                    procedureList.querySelector('li').click();
+                }
+            } else {
+                throw new Error('No active session');
+            }
+        })
+        .catch(error => {
+            console.error('Session check failed:', error);
+            updateConnectionStatus(false, error);
+        });
+    }
+}
+
+/**
+ * Simulate a session for development/testing
+ * This is used when the API is not available
+ */
+function simulateSession() {
+    console.warn('Using simulated session for development');
+    
+    // Set simulated connection state
+    connectionState.isConnected = true;
+    connectionState.userRole = 'admin'; // Can be 'viewer' or 'admin'
+    connectionState.username = 'TestUser';
+    
     // Update UI
     updateConnectionStatus(true);
     updateUserInfo({
@@ -63,16 +147,15 @@ function checkUserSession() {
         role: connectionState.userRole
     });
     updateUIForRole(connectionState.userRole);
-
+    
     // Enable procedure selection
     enableProcedureSelection();
-
+    
     // Select the first procedure by default
     if (procedureList.querySelector('li')) {
         procedureList.querySelector('li').click();
     }
 }
-
 
 /**
  * Update user information in sidebar
@@ -140,7 +223,6 @@ function handleLogout() {
         showNotification('error', 'An error occurred during logout');
     });
 }
-
 
 /**
  * Enable procedure selection in the sidebar
@@ -257,74 +339,64 @@ function executeProcedure(procedure, parameters) {
         });
     }
     
+    // Include role information in the request
+    const requestBody = {
+        procedure: procedure,
+        parameters: formattedParams,
+        role: connectionState.userRole // Pass the user's role to the server
+    };
+
     // Make an API call to execute the procedure
-    return fetch('/api/execute-procedure', {
+    return fetch(`${API_BASE_URL}/api/execute-procedure`, {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json'
         },
-        body: JSON.stringify({
-            procedure: procedure,
-            parameters: formattedParams
-        }),
+        body: JSON.stringify(requestBody),
         credentials: 'include'  // Include session cookies
     })
     .then(response => {
         if (!response.ok) {
             if (response.status === 401) {
-                // Unauthorized - redirect to login
-                window.location.href = 'login.html';
-                throw new Error('Session expired. Please log in again.');
+                // Handle authentication error
+                console.warn('Authentication required. Ensure the server recognizes the simulated user.');
+                throw new Error('Authentication required');
             }
             return response.json().then(data => {
                 throw new Error(data.message || 'Procedure execution failed');
             });
         }
         return response.json().then(data => data.results);
+    })
+    .then(results => {
+        console.log('Fetched Results:', results);
+
+        // Process the results to extract relevant columns
+        // Use results.rows instead of results directly
+        const processedResults = results.rows.map(row => {
+            const keys = Object.keys(row);
+            return {
+                state_fp: row['state_fp'],
+                county_fp: row['county_fp'],
+                last_column: row[keys[keys.length - 1]]
+            };
+        });
+
+        console.log('Processed Results for Visualization:', processedResults);
+        displayResults(processedResults);
+
+        return results;
+    })
+    .catch(error => {
+        console.error('Procedure execution error:', error);
+        throw error;
     });
 }
 
 /**
  * Show a notification message
- * @param {string} type - Notification type: 'success', 'error', 'info', 'warning'
- * @param {string} message - Message to display
- */
-function showNotification(type, message) {
-    const container = document.getElementById('notification-container');
-    const notification = document.createElement('div');
-    
-    notification.className = `notification ${type}`;
-    
-    // Add icon based on type
-    let icon;
-    switch (type) {
-        case 'success':
-            icon = '<i class="fas fa-check-circle"></i>';
-            break;
-        case 'error':
-            icon = '<i class="fas fa-times-circle"></i>';
-            break;
-        case 'info':
-            icon = '<i class="fas fa-info-circle"></i>';
-            break;
-        case 'warning':
-            icon = '<i class="fas fa-exclamation-triangle"></i>';
-            break;
-        default:
-            icon = '<i class="fas fa-bell"></i>';
-    }
-    
-    notification.innerHTML = `${icon} ${message}`;
-    container.appendChild(notification);
-    
-    // Remove after delay
-    setTimeout(() => {
-        notification.style.opacity = '0';
-        setTimeout(() => {
-            container.removeChild(notification);
-        }, 300);
-    }, 5000);
-}
+ * Uses the global showNotification function from results.js if available,
+
 
 /**
  * Toggle the loading overlay

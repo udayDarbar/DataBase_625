@@ -40,6 +40,37 @@ let sqlConfig = {
 
 console.log('Using SQL Config:', sqlConfig);
 
+// Role-based SQL Server credentials
+const roleBasedCredentials = {
+  viewer: {
+    user: 'ViewerUserLogin', // Replace with actual viewer login
+    password: 'StrongP@ssword1!' // Replace with actual viewer password
+  },
+  admin: {
+    user: 'AdminUserLogin', // Replace with actual admin login
+    password: 'StrongP@ssword2!' // Replace with actual admin password
+  }
+};
+
+// Function to get SQL Server config based on role
+function getSqlConfigForRole(role) {
+  const credentials = roleBasedCredentials[role];
+  if (!credentials) {
+    throw new Error(`No credentials found for role: ${role}`);
+  }
+
+  return {
+    ...sqlConfig,
+    authentication: {
+      type: 'default',
+      options: {
+        userName: credentials.user,
+        password: credentials.password
+      }
+    }
+  };
+}
+
 // Global pool for database connection
 let globalPool = null;
 
@@ -160,55 +191,53 @@ app.get('/api/session', (req, res) => {
   }
 });
 
-// Execute stored procedure endpoint - requires authentication
-app.post('/api/execute-procedure', authMiddleware, async (req, res) => {
+// Execute stored procedure endpoint - refined for proper execution
+// Remove authMiddleware from this endpoint for testing
+app.post('/api/execute-procedure', async (req, res) => {  // Removed authMiddleware
   try {
-    if (!globalPool) {
-      return res.status(500).json({ 
-        success: false, 
-        message: 'Database connection not available' 
-      });
-    }
-    
     const { procedure, parameters } = req.body;
-    
-    // Check if procedure execution is allowed for this role
-    // Viewer role can only execute read-only procedures
-    if (req.session.user.role === 'viewer' && procedure.toLowerCase().startsWith('sp_update')) {
-      return res.status(403).json({
+
+    console.log(`Executing procedure: ${procedure}`);
+
+    if (!globalPool) {
+      console.error('Database connection not available');
+      return res.status(500).json({
         success: false,
-        message: 'This procedure requires admin privileges'
+        message: 'Database connection not available',
       });
     }
-    
+
     // Create a new request
     const request = globalPool.request();
-    
-    // Add parameters to request
+
+    // Add parameters to the request
     if (parameters && Array.isArray(parameters)) {
       parameters.forEach(param => {
+        console.log(`Adding parameter: ${param.name} = ${param.value}`);
         request.input(param.name, param.value);
       });
     }
-    
-    // Execute stored procedure
+
+    // Execute the stored procedure
     const result = await request.execute(procedure);
-    
+
     // Format the response
     const formattedResults = {
       columns: result.recordset && result.recordset.length > 0 ? Object.keys(result.recordset[0]) : [],
       rows: result.recordset || []
     };
-    
+
+    console.log('Procedure executed successfully:', formattedResults);
+
     res.json({
       success: true,
       results: formattedResults
     });
   } catch (error) {
     console.error('Procedure execution error:', error);
-    res.status(500).json({ 
-      success: false, 
-      message: error.message 
+    res.status(500).json({
+      success: false,
+      message: error.message
     });
   }
 });
@@ -217,6 +246,15 @@ app.post('/api/execute-procedure', authMiddleware, async (req, res) => {
 app.post('/api/procedure/:procedure', async (req, res) => {
   const { procedure } = req.params;
   const params = req.body;
+
+  if (!procedure) {
+    return res.status(400).json({
+      success: false,
+      message: 'Procedure name is required'
+    });
+  }
+
+  console.log(`Executing procedure: ${procedure}`);
 
   if (!globalPool) {
     console.error('Database connection not available');
@@ -228,15 +266,36 @@ app.post('/api/procedure/:procedure', async (req, res) => {
 
   try {
     const request = globalPool.request();
+
+    // Convert flat params object to array of { name, value } and add inputs
     Object.keys(params).forEach((key) => {
+      console.log(`Adding parameter: ${key} = ${params[key]}`);
       request.input(key, params[key]);
     });
 
+    // Execute the stored procedure
     const result = await request.execute(procedure);
-    res.json(result.recordset);
+
+    // Format the response
+    const formattedResults = {
+      columns: result.recordset && result.recordset.length > 0 ? Object.keys(result.recordset[0]) : [],
+      rows: result.recordset || []
+    };
+
+    console.log('Procedure executed successfully:', formattedResults);
+
+    res.json({
+      success: true,
+      results: formattedResults
+    });
   } catch (error) {
     console.error('Error executing procedure:', error);
-    res.status(500).send('Error executing procedure');
+
+    // Return a more descriptive error message
+    res.status(500).json({
+      success: false,
+      message: error.originalError ? error.originalError.message : error.message
+    });
   }
 });
 

@@ -6,9 +6,10 @@
     <title>Census Data Analysis Tool</title>
     <link rel="stylesheet" href="css/main.css">
     <link rel="stylesheet" href="css/results.css">
+    <link rel="stylesheet" href="css/visualization.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css">
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script> <!-- Add Chart.js -->
-    <script src="https://d3js.org/d3.v7.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script> <!-- Add Chart.js for visualization -->
+    <script src="https://d3js.org/d3.v7.min.js"></script> <!-- Add D3.js -->
 </head>
 <body>
     <div class="app-wrapper">
@@ -73,44 +74,385 @@
             </div>
 
             <div class="content-area">
-                <!-- Same procedure panels as before -->
-                <!-- All the procedure panels remain unchanged -->
-                <!-- ... Original procedure panels from the first solution ... -->
-                <!-- Visualization Section -->
-                <div class="visualization-panel">
-                    <h2>Data Visualization</h2>
-                    <div class="visualization-controls">
-                        <label for="procedure-select">Select Procedure:</label>
-                        <select id="procedure-select">
-                            <option value="sp_IdentifyHighPovertyAreas">High Poverty Areas</option>
-                            <option value="sp_IdentifyLowCoverageParishes">Low Insurance Coverage</option>
-                            <option value="sp_AnalyzeStoreLocationPotential">Store Location Analysis</option>
-                            <option value="sp_ExportCensusDataForHealthStudy">Export Health Data</option>
-                            <option value="sp_GetYearlyPopulationTrends">Population Trends</option>
-                            <option value="sp_IdentifyTransportGaps">Transportation Gaps</option>
-                            <option value="sp_AssessHousingAffordability">Housing Affordability</option>
-                            <option value="sp_IdentifyUnderinsuredPopulations">Underinsured Populations</option>
-                        </select>
-
-                        <label for="year-select">Select Year:</label>
-                        <select id="year-select">
-                            <option value="2012">2012</option>
-                            <option value="2013">2013</option>
-                            <option value="2014">2014</option>
-                            <option value="2015">2015</option>
-                        </select>
-
-                        <button id="generate-chart" class="btn btn-primary">Generate Chart</button>
+                <div class="procedure-container">
+                    <!-- Add this visualization container -->
+                    <div id="visualization-container">
+                        <svg id="chart"></svg>
                     </div>
-                    <canvas id="dataChart" width="400" height="200"></canvas>
+                    <!-- Store Location Analysis -->
+                    <div class="procedure-panel" id="sp_AnalyzeStoreLocationPotential">
+                        <div class="procedure-header">
+                            <h2><i class="fas fa-store"></i> Store Location Analysis</h2>
+                        </div>
+                        <div class="procedure-content">
+                            <div class="procedure-description">
+                                <p>Analyzes geographic areas to find good potential locations for stores based on population and income filters.</p>
+                            </div>
+                            <form class="procedure-form">
+                                <div class="form-group">
+                                    <label for="slp-year">Census Year:</label>
+                                    <input type="number" id="slp-year" name="Year" min="2000" max="2023" value="2020" required>
+                                </div>
+                                <div class="form-group">
+                                    <label for="slp-min-population">Minimum Population:</label>
+                                    <input type="number" id="slp-min-population" name="MinPopulation" min="0" value="5000" required>
+                                </div>
+                                <div class="form-group">
+                                    <label for="slp-min-income">Minimum Median Income ($):</label>
+                                    <input type="number" id="slp-min-income" name="MinMedianIncome" min="0" value="50000" required>
+                                </div>
+                                <button type="submit" class="btn btn-execute">Execute Procedure</button>
+                            </form>
+                        </div>
+                        <div class="results-container">
+                            <div class="results-header">
+                                <h3>Results</h3>
+                                <div class="results-actions">
+                                    <button class="btn btn-sm btn-export" title="Export to CSV">
+                                        <i class="fas fa-file-csv"></i>
+                                    </button>
+                                    <button class="btn btn-sm btn-clear" title="Clear Results">
+                                        <i class="fas fa-trash"></i>
+                                    </button>
+                                </div>
+                            </div>
+                            <div class="results-content">
+                                <div class="results-empty-state">
+                                    <p>Execute the procedure to see results</p>
+                                </div>
+                                <div class="results-data" style="display:none;">
+                                    <!-- Results will be dynamically inserted here by results.js -->
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Housing Affordability -->
+                    <div class="procedure-panel" id="sp_AssessHousingAffordability">
+                        <div class="procedure-header">
+                            <h2><i class="fas fa-home"></i> Housing Affordability</h2>
+                        </div>
+                        <div class="procedure-content">
+                            <div class="procedure-description">
+                                <p>Calculates rent-to-income ratios to assess if housing is affordable in a given area.</p>
+                            </div>
+                            <form class="procedure-form">
+                                <div class="form-group">
+                                    <label for="ha-year">Census Year:</label>
+                                    <input type="number" id="ha-year" name="Year" min="2000" max="2023" value="2020" required>
+                                </div>
+                                <div class="form-group">
+                                    <label for="ha-ratio-threshold">Rent-to-Income Ratio Threshold:</label>
+                                    <input type="number" id="ha-ratio-threshold" name="RentToIncomeRatioThreshold" min="0" max="1" step="0.01" value="0.3" required>
+                                    <span class="help-text">Standard affordability guideline is 0.3 (30% of income)</span>
+                                </div>
+                                <button type="submit" class="btn btn-execute">Execute Procedure</button>
+                            </form>
+                        </div>
+                        <div class="results-container">
+                            <div class="results-header">
+                                <h3>Results</h3>
+                                <div class="results-actions">
+                                    <button class="btn btn-sm btn-export" title="Export to CSV">
+                                        <i class="fas fa-file-csv"></i>
+                                    </button>
+                                    <button class="btn btn-sm btn-clear" title="Clear Results">
+                                        <i class="fas fa-trash"></i>
+                                    </button>
+                                </div>
+                            </div>
+                            <div class="results-content">
+                                <div class="results-empty-state">
+                                    <p>Execute the procedure to see results</p>
+                                </div>
+                                <div class="results-data" style="display:none;">
+                                    <!-- Results will be dynamically inserted here by results.js -->
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Export Census Data for Health Study -->
+                    <div class="procedure-panel" id="sp_ExportCensusDataForHealthStudy">
+                        <div class="procedure-header">
+                            <h2><i class="fas fa-file-export"></i> Export Health Data</h2>
+                        </div>
+                        <div class="procedure-content">
+                            <div class="procedure-description">
+                                <p>Combines key demographic, housing, and transportation data for export and use in health-related studies.</p>
+                            </div>
+                            <form class="procedure-form">
+                                <div class="form-group">
+                                    <label for="health-start-year">Start Year:</label>
+                                    <input type="number" id="health-start-year" name="StartYear" min="2000" max="2023" value="2018" required>
+                                </div>
+                                <div class="form-group">
+                                    <label for="health-end-year">End Year:</label>
+                                    <input type="number" id="health-end-year" name="EndYear" min="2000" max="2023" value="2020" required>
+                                </div>
+                                <button type="submit" class="btn btn-execute">Execute Procedure</button>
+                            </form>
+                        </div>
+                        <div class="results-container">
+                            <div class="results-header">
+                                <h3>Results</h3>
+                                <div class="results-actions">
+                                    <button class="btn btn-sm btn-export" title="Export to CSV">
+                                        <i class="fas fa-file-csv"></i>
+                                    </button>
+                                    <button class="btn btn-sm btn-clear" title="Clear Results">
+                                        <i class="fas fa-trash"></i>
+                                    </button>
+                                </div>
+                            </div>
+                            <div class="results-content">
+                                <div class="results-empty-state">
+                                    <p>Execute the procedure to see results</p>
+                                </div>
+                                <div class="results-data" style="display:none;">
+                                    <!-- Results will be dynamically inserted here by results.js -->
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Population Trends -->
+                    <div class="procedure-panel" id="sp_GetYearlyPopulationTrends">
+                        <div class="procedure-header">
+                            <h2><i class="fas fa-chart-line"></i> Population Trends</h2>
+                        </div>
+                        <div class="procedure-content">
+                            <div class="procedure-description">
+                                <p>Tracks changes in population year over year for each tract, showing demographic growth or decline.</p>
+                            </div>
+                            <form class="procedure-form">
+                                <div class="form-group">
+                                    <label for="pop-start-year">Start Year:</label>
+                                    <input type="number" id="pop-start-year" name="StartYear" min="2000" max="2023" value="2018" required>
+                                </div>
+                                <div class="form-group">
+                                    <label for="pop-end-year">End Year:</label>
+                                    <input type="number" id="pop-end-year" name="EndYear" min="2000" max="2023" value="2020" required>
+                                </div>
+                                <button type="submit" class="btn btn-execute">Execute Procedure</button>
+                            </form>
+                        </div>
+                        <div class="results-container">
+                            <div class="results-header">
+                                <h3>Results</h3>
+                                <div class="results-actions">
+                                    <button class="btn btn-sm btn-export" title="Export to CSV">
+                                        <i class="fas fa-file-csv"></i>
+                                    </button>
+                                    <button class="btn btn-sm btn-clear" title="Clear Results">
+                                        <i class="fas fa-trash"></i>
+                                    </button>
+                                </div>
+                            </div>
+                            <div class="results-content">
+                                <div class="results-empty-state">
+                                    <p>Execute the procedure to see results</p>
+                                </div>
+                                <div class="results-data" style="display:none;">
+                                    <!-- Results will be dynamically inserted here by results.js -->
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- High Poverty Areas -->
+                    <div class="procedure-panel" id="sp_IdentifyHighPovertyAreas">
+                        <div class="procedure-header">
+                            <h2><i class="fas fa-hand-holding-usd"></i> High Poverty Areas</h2>
+                        </div>
+                        <div class="procedure-content">
+                            <div class="procedure-description">
+                                <p>Identifies tracts with a high number of people living below the poverty line.</p>
+                            </div>
+                            <form class="procedure-form">
+                                <div class="form-group">
+                                    <label for="poverty-start-year">Start Year:</label>
+                                    <input type="number" id="poverty-start-year" name="StartYear" min="2000" max="2023" value="2018" required>
+                                </div>
+                                <div class="form-group">
+                                    <label for="poverty-end-year">End Year:</label>
+                                    <input type="number" id="poverty-end-year" name="EndYear" min="2000" max="2023" value="2020" required>
+                                </div>
+                                <div class="form-group">
+                                    <label for="poverty-threshold">Poverty Threshold (people):</label>
+                                    <input type="number" id="poverty-threshold" name="PovertyThreshold" min="0" value="1000" required>
+                                </div>
+                                <button type="submit" class="btn btn-execute">Execute Procedure</button>
+                            </form>
+                        </div>
+                        <div class="results-container">
+                            <div class="results-header">
+                                <h3>Results</h3>
+                                <div class="results-actions">
+                                    <button class="btn btn-sm btn-export" title="Export to CSV">
+                                        <i class="fas fa-file-csv"></i>
+                                    </button>
+                                    <button class="btn btn-sm btn-clear" title="Clear Results">
+                                        <i class="fas fa-trash"></i>
+                                    </button>
+                                </div>
+                            </div>
+                            <div class="results-content">
+                                <div class="results-empty-state">
+                                    <p>Execute the procedure to see results</p>
+                                </div>
+                                <div class="results-data" style="display:none;">
+                                    <!-- Results will be dynamically inserted here by results.js -->
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Low Coverage Parishes -->
+                    <div class="procedure-panel" id="sp_IdentifyLowCoverageParishes">
+                        <div class="procedure-header">
+                            <h2><i class="fas fa-heart"></i> Low Insurance Coverage</h2>
+                        </div>
+                        <div class="procedure-content">
+                            <div class="procedure-description">
+                                <p>Finds parishes where health insurance coverage is below a given threshold.</p>
+                            </div>
+                            <form class="procedure-form">
+                                <div class="form-group">
+                                    <label for="coverage-year">Census Year:</label>
+                                    <input type="number" id="coverage-year" name="Year" min="2000" max="2023" value="2020" required>
+                                </div>
+                                <div class="form-group">
+                                    <label for="coverage-threshold">Coverage Threshold (people):</label>
+                                    <input type="number" id="coverage-threshold" name="CoverageThreshold" min="0" value="5000" required>
+                                </div>
+                                <button type="submit" class="btn btn-execute">Execute Procedure</button>
+                            </form>
+                        </div>
+                        <div class="results-container">
+                            <div class="results-header">
+                                <h3>Results</h3>
+                                <div class="results-actions">
+                                    <button class="btn btn-sm btn-export" title="Export to CSV">
+                                        <i class="fas fa-file-csv"></i>
+                                    </button>
+                                    <button class="btn btn-sm btn-clear" title="Clear Results">
+                                        <i class="fas fa-trash"></i>
+                                    </button>
+                                </div>
+                            </div>
+                            <div class="results-content">
+                                <div class="results-empty-state">
+                                    <p>Execute the procedure to see results</p>
+                                </div>
+                                <div class="results-data" style="display:none;">
+                                    <!-- Results will be dynamically inserted here by results.js -->
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Transportation Gaps -->
+                    <div class="procedure-panel" id="sp_IdentifyTransportGaps">
+                        <div class="procedure-header">
+                            <h2><i class="fas fa-bus"></i> Transportation Gaps</h2>
+                        </div>
+                        <div class="procedure-content">
+                            <div class="procedure-description">
+                                <p>Highlights areas with poor public transportation and long commute times.</p>
+                            </div>
+                            <form class="procedure-form">
+                                <div class="form-group">
+                                    <label for="transport-year">Census Year:</label>
+                                    <input type="number" id="transport-year" name="Year" min="2000" max="2023" value="2020" required>
+                                </div>
+                                <div class="form-group">
+                                    <label for="transport-max-travel">Maximum Travel Time (minutes):</label>
+                                    <input type="number" id="transport-max-travel" name="MaxTravelTime" min="0" value="45" required>
+                                </div>
+                                <div class="form-group">
+                                    <label for="transport-min-public">Minimum Public Transport Usage (people):</label>
+                                    <input type="number" id="transport-min-public" name="MinPublicTransportUsage" min="0" value="500" required>
+                                </div>
+                                <button type="submit" class="btn btn-execute">Execute Procedure</button>
+                            </form>
+                        </div>
+                        <div class="results-container">
+                            <div class="results-header">
+                                <h3>Results</h3>
+                                <div class="results-actions">
+                                    <button class="btn btn-sm btn-export" title="Export to CSV">
+                                        <i class="fas fa-file-csv"></i>
+                                    </button>
+                                    <button class="btn btn-sm btn-clear" title="Clear Results">
+                                        <i class="fas fa-trash"></i>
+                                    </button>
+                                </div>
+                            </div>
+                            <div class="results-content">
+                                <div class="results-empty-state">
+                                    <p>Execute the procedure to see results</p>
+                                </div>
+                                <div class="results-data" style="display:none;">
+                                    <!-- Results will be dynamically inserted here by results.js -->
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Underinsured Populations -->
+                    <div class="procedure-panel" id="sp_IdentifyUnderinsuredPopulations">
+                        <div class="procedure-header">
+                            <h2><i class="fas fa-wheelchair"></i> Underinsured Populations</h2>
+                        </div>
+                        <div class="procedure-content">
+                            <div class="procedure-description">
+                                <p>Estimates the number of underinsured individuals with disabilities in each area.</p>
+                            </div>
+                            <form class="procedure-form">
+                                <div class="form-group">
+                                    <label for="underinsured-year">Census Year:</label>
+                                    <input type="number" id="underinsured-year" name="Year" min="2000" max="2023" value="2020" required>
+                                </div>
+                                <button type="submit" class="btn btn-execute">Execute Procedure</button>
+                            </form>
+                        </div>
+                        <div class="results-container">
+                            <div class="results-header">
+                                <h3>Results</h3>
+                                <div class="results-actions">
+                                    <button class="btn btn-sm btn-export" title="Export to CSV">
+                                        <i class="fas fa-file-csv"></i>
+                                    </button>
+                                    <button class="btn btn-sm btn-clear" title="Clear Results">
+                                        <i class="fas fa-trash"></i>
+                                    </button>
+                                </div>
+                            </div>
+                            <div class="results-content">
+                                <div class="results-empty-state">
+                                    <p>Execute the procedure to see results</p>
+                                </div>
+                                <div class="results-data" style="display:none;">
+                                    <!-- Results will be dynamically inserted here by results.js -->
+                                </div>
+                            </div>
+                        </div>
+                    </div>
                 </div>
-            </div>
+            
+    <!-- Add this container for results -->
+    <div id="results-container">
+        <div id="chart-container">
+            <svg id="chart" width="800" height="600"></svg>
         </div>
+        <div id="table-container"></div>
     </div>
-
+</div>
+            
     <!-- Notification system -->
-    <div class="notification-container" id="notification-container"></div>
-
+    <div id="notification" class="notification"></div>
+    
     <!-- Loading Overlay -->
     <div class="loading-overlay" id="loading-overlay">
         <div class="spinner"></div>
@@ -121,7 +463,6 @@
     <script src="js/connection.js"></script>
     <script src="js/procedures.js"></script>
     <script src="js/results.js"></script>
-    <script src="js/visualization.js"></script> <!-- Add visualization script -->
+    <script src="js/visualization.js"></script>
 </body>
-
 </html>

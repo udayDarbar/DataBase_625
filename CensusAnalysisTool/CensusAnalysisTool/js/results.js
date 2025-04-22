@@ -41,40 +41,152 @@ function initResultsHandling() {
  * @param {Object} results - Results data object
  */
 function displayResults(procedurePanel, results) {
-    // Find results containers
+    // Format data for D3
+    const d3Data = formatDataForD3(results);
+    console.log('Formatted D3 data:', d3Data); // For debugging
+
+    if (!d3Data || d3Data.length === 0) {
+        console.warn('No valid data for visualization');
+        return;
+    }
+
+    // Clear previous chart
+    d3.select('#chart').selectAll('*').remove();
+
+    // Set up dimensions
+    const margin = {top: 40, right: 40, bottom: 60, left: 60};
+    const width = 800 - margin.left - margin.right;
+    const height = 400 - margin.top - margin.bottom;
+
+    // Create SVG
+    const svg = d3.select('#chart')
+        .attr('width', width + margin.left + margin.right)
+        .attr('height', height + margin.top + margin.bottom)
+        .append('g')
+        .attr('transform', `translate(${margin.left},${margin.top})`);
+
+    // Create scales
+    const x = d3.scaleLinear()
+        .domain([d3.min(d3Data, d => d.year), d3.max(d3Data, d => d.year)])
+        .range([0, width]);
+
+    const y = d3.scaleLinear()
+        .domain([0, d3.max(d3Data, d => d.population)])
+        .range([height, 0]);
+
+    // Add X axis
+    svg.append('g')
+        .attr('transform', `translate(0,${height})`)
+        .call(d3.axisBottom(x).tickFormat(d3.format('d'))) // Use 'd' format for years
+        .selectAll('text')
+        .style('text-anchor', 'end')
+        .attr('dx', '-.8em')
+        .attr('dy', '.15em')
+        .attr('transform', 'rotate(-45)');
+
+    // Add Y axis
+    svg.append('g')
+        .call(d3.axisLeft(y).tickFormat(d3.format(',d'))); // Use comma format for population
+
+    // Add dots
+    svg.selectAll('circle')
+        .data(d3Data)
+        .join('circle')
+        .attr('cx', d => x(d.year))
+        .attr('cy', d => y(d.population))
+        .attr('r', 5)
+        .style('fill', '#4f46e5')
+        .style('opacity', 0.6)
+        .on('mouseover', function(event, d) {
+            // Add tooltip on hover
+            d3.select(this)
+                .style('fill', '#ef4444')
+                .attr('r', 8);
+                
+            svg.append('text')
+                .attr('class', 'tooltip')
+                .attr('x', x(d.year) + 10)
+                .attr('y', y(d.population) - 10)
+                .text(`Pop: ${d3.format(',')(d.population)}`);
+        })
+        .on('mouseout', function() {
+            d3.select(this)
+                .style('fill', '#4f46e5')
+                .attr('r', 5);
+            svg.selectAll('.tooltip').remove();
+        });
+
+    // Add labels
+    svg.append('text')
+        .attr('x', width / 2)
+        .attr('y', height + margin.bottom - 10)
+        .style('text-anchor', 'middle')
+        .text('Year');
+
+    svg.append('text')
+        .attr('transform', 'rotate(-90)')
+        .attr('y', -margin.left + 20)
+        .attr('x', -(height / 2))
+        .style('text-anchor', 'middle')
+        .text('Population');
+
+    // Add chart title
+    svg.append('text')
+        .attr('x', width / 2)
+        .attr('y', -margin.top / 2)
+        .style('text-anchor', 'middle')
+        .style('font-size', '16px')
+        .text('Population Trends Over Time');
+
+    // Also display the tabular data
+    displayTabularResults(procedurePanel, results);
+}
+
+function displayTabularResults(procedurePanel, results) {
     const resultsData = procedurePanel.querySelector('.results-data');
     const emptyState = procedurePanel.querySelector('.results-empty-state');
     
-    // Update results state
-    resultsState.currentProcedure = procedurePanel.id;
-    resultsState.currentResults = results;
-    resultsState.currentPage = 1;
-    
-    // Hide empty state, show results data
+    if (!results || !results.rows || results.rows.length === 0) {
+        emptyState.style.display = 'block';
+        resultsData.style.display = 'none';
+        return;
+    }
+
+    // Show results container
     emptyState.style.display = 'none';
     resultsData.style.display = 'block';
-    
-    // Create results content
-    const resultsContent = document.createElement('div');
-    resultsContent.className = 'results-content-inner';
-    
-    // Add results summary
-    const summaryElement = createResultsSummary(results);
-    resultsContent.appendChild(summaryElement);
-    
-    // Create and add the results table
-    const tableElement = createResultsTable(results);
-    resultsContent.appendChild(tableElement);
-    
-    // Create pagination if needed
-    if (results.rows.length > resultsState.pageSize) {
-        const paginationElement = createPagination(results.rows.length);
-        resultsContent.appendChild(paginationElement);
-    }
-    
-    // Clear previous results and add new content
+
+    // Create table
+    const table = document.createElement('table');
+    table.className = 'results-table';
+
+    // Add headers
+    const thead = document.createElement('thead');
+    const headerRow = document.createElement('tr');
+    Object.keys(results.rows[0]).forEach(key => {
+        const th = document.createElement('th');
+        th.textContent = key;
+        headerRow.appendChild(th);
+    });
+    thead.appendChild(headerRow);
+    table.appendChild(thead);
+
+    // Add data rows
+    const tbody = document.createElement('tbody');
+    results.rows.forEach(row => {
+        const tr = document.createElement('tr');
+        Object.values(row).forEach(value => {
+            const td = document.createElement('td');
+            td.textContent = value;
+            tr.appendChild(td);
+        });
+        tbody.appendChild(tr);
+    });
+    table.appendChild(tbody);
+
+    // Clear and update results
     resultsData.innerHTML = '';
-    resultsData.appendChild(resultsContent);
+    resultsData.appendChild(table);
 }
 
 /**
@@ -555,5 +667,74 @@ function showNotification(type, message) {
     }
 }
 
+// Update the showNotification function
+function showNotification(message, type = 'info') {
+    const notification = document.getElementById('notification');
+    if (!notification) {
+        console.warn('Notification element not found');
+        return;
+    }
+
+    notification.textContent = message;
+    notification.className = `notification ${type}`;
+    notification.style.display = 'block';
+
+    // Auto-hide after 5 seconds
+    setTimeout(() => {
+        notification.style.display = 'none';
+    }, 5000);
+}
+
 // Initialize results handling when DOM is ready
 document.addEventListener('DOMContentLoaded', initResultsHandling);
+
+// Make functions available globally if needed
+window.displayResults = displayResults;
+
+/**
+ * Format data for D3 visualization
+ * @param {Object} sqlResults - SQL results object
+ * @returns {Array} Formatted data array
+ */
+function formatDataForD3(sqlResults) {
+    console.log('Raw SQL results:', sqlResults); // Debug log
+
+    // Handle the case where results come as rows property
+    if (sqlResults && sqlResults.rows) {
+        return sqlResults.rows.filter(row => {
+            // Filter out rows with null values
+            return row.PopulationThisYear != null && 
+                   row.PopulationLastYear != null && 
+                   row.YearlyChange != null;
+        }).map(row => ({
+            // Convert string values to numbers and rename for clarity
+            year: +row.CurrentYear,
+            population: +row.PopulationThisYear,
+            previousPopulation: +row.PopulationLastYear,
+            change: +row.YearlyChange,
+            state: row.StateFP,
+            county: row.CountyFP,
+            tract: row.Tract
+        }));
+    }
+
+    // If results are already an array
+    if (Array.isArray(sqlResults)) {
+        return sqlResults.filter(row => {
+            return row.PopulationThisYear != null && 
+                   row.PopulationLastYear != null && 
+                   row.YearlyChange != null;
+        }).map(row => ({
+            year: +row.CurrentYear,
+            population: +row.PopulationThisYear,
+            previousPopulation: +row.PopulationLastYear,
+            change: +row.YearlyChange,
+            state: row.StateFP,
+            county: row.CountyFP,
+            tract: row.Tract
+        }));
+    }
+
+    console.error('Invalid SQL results format');
+    return [];
+}
