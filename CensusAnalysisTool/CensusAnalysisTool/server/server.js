@@ -22,18 +22,19 @@ app.use(session({
 
 // Database configuration
 let sqlConfig = {
-  server: 'WIN11-VM', // Your server name from the screenshot
-  database: 'CensusData2',
+  server: 'DESKTOP-32I8LFV',
+  database: 'CensusData',
   authentication: {
     type: 'default',
     options: {
-      userName: '', // Will be filled during login
-      password: ''  // Will be filled during login
+      trustedConnection: true
     }
   },
   options: {
+    trustServerCertificate: true,
     encrypt: true,
-    trustServerCertificate: true
+    enableArithAbort: true,
+    integratedSecurity: true
   }
 };
 
@@ -48,7 +49,10 @@ async function initializeDatabase() {
     const winAuthConfig = {
       ...sqlConfig,
       authentication: {
-        type: 'ntlm'
+        type: 'ntlm',
+        options: {
+          domain: 'DESKTOP-32I8LFV', // Replace with your Windows domain
+        }
       },
       options: {
         ...sqlConfig.options,
