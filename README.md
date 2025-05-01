@@ -58,8 +58,6 @@ The main files in this project:
 
 This interface is designed to connect to a database where the listed stored procedures are already defined. These procedures should match the parameter definitions in the `procedures.js` file.
 
-In a production environment, you would need to create an API gateway or backend service that securely connects to SQL Server and executes these procedures. The current implementation simulates these connections for demonstration purposes.
-
 ## License
 
 This project is licensed under the MIT License - see the LICENSE file for details.
