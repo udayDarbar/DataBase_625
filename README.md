@@ -1,6 +1,6 @@
 # Census Data Analysis Tool
 
-A web-based tool for analyzing US Census data using stored procedures in SQL Server. This application provides a user-friendly interface to execute stored procedures, view results, and export data without requiring Docker or complex setup.
+A web-based tool for analyzing US Census data using stored procedures in SQL Server. This application provides a user-friendly interface to execute stored procedures, view results, and export data.
 
 ## Features
 
