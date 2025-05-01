@@ -43,7 +43,7 @@ This tool interfaces with the following stored procedures:
 
 ## For Developers
 
-If you need to modify how the application connects to the database, edit the `connection.js` file. This file contains the simulated API connection logic, which you can replace with actual SQL Server connection code.
+If you need to modify how the application connects to the database, edit the `connection.js` file. This file contains the API connection logic, which you can replace with your SQL Server connection code.
 
 The main files in this project:
 
